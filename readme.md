@@ -5,7 +5,7 @@
   - [constexpr [C++11]](#constexpr-c11)
   - [constinit [C++20]](#constinit-c20)
   - [consteval [C++20]](#consteval-c20)
-  - [std::is_constant_evaluated [C++20]](#std::is_constant_evaluated-c20)
+  - [std::is_constant_evaluated [C++20]](#stdis_constant_evaluated-c20)
 - [Literals](#literals)
   - [Binary Literals [C++14]](#binary-literals-c14)
   - [Digit separators [C++14]](#digit-separators-c14)
