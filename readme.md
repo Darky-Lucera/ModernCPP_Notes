@@ -54,6 +54,10 @@
   - [Generate default function [C++11]](#generate-default-function-c11)
   - [Explicit delete default function [C++11]](#explicit-delete-default-function-c11)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-c11)
+  - [Other interesting parts](#Other-interesting-parts)
+    - [R-Values [C++11]](#R-Values-C11)
+    - [Move constructors [C++11]](#Move-constructors-C11)
+    - [Extern templates [C++11]](#Extern-templates-c11)
 - [Deprecated Features](#deprecated-features)
 
 # Constants
@@ -422,7 +426,7 @@ Example:
 #include <initializer_list>
 
 std::initializer_list<int> values = {1, 2, 3, 4, 5};
-std::vector<float>         vec    = {1.0f, 2.0f, 3.0f};   // Automatic conversion.
+std::vector<float>         vec    = {1, 2.0, 3.0f};   // Automatic conversion.
 
 void printValues(std::initializer_list<int> values) {
     for (auto it = values.begin(); it != values.end(); ++it) {
@@ -452,6 +456,8 @@ struct Struct {
 };
 
 Struct obj1 { "Carlos", 10 };
+
+std::vector<float> vec {1, 2, 3};
 ```
 
 ## Designated Initializers [C++20]
@@ -938,6 +944,46 @@ enum class Status : uint8_t {
 Status s1 = ON; // Error
 Status s2 = Status::ON; // Error
 Status s3 = 0: // Error
+```
+# Other interesting parts
+
+## R-Values [C++11]
+
+- An **rvalue** reference is a special type of reference that can bind to **temporary objects**.
+- Rvalue references are denoted by the double ampersand (**&&**).
+- They allow you to identify and distinguish temporary objects from regular ones.
+
+```cpp
+int a = 3;
+int b = 4;
+int &&rvalue = a + b;
+```
+
+## Move constructors [C++11]
+
+- A move constructor is a special type of constructor that allows the efficient transfer of resources (like memory ownership) from a temporary object to another object.
+- It's invoked automatically when you initialize an object with an rvalue.
+- Move constructors are typically used to avoid unnecessary copies of objects, improving performance.
+
+```cpp
+class Cls {
+  public:
+    Cls()                 { ptr = new uint8_t; *ptr = 0;          } // Creates and initializes a pointer
+    Cls(const Cls &other) { ptr = new uint8_t; *ptr = *other.ptr; } // Creates a pointer and copies the values of other object's pointer
+    Cls(Cls &&other)      { std::swap(ptr, other.ptr);            } // Steals the other object's pointer because it's temporary and will be destroyed
+    ~Cls()                { if (ptr != nullptr) delete ptr;       } // Destroys the pointer
+
+  protected:
+        uint8_t *ptr = nullptr;
+};
+```
+## Extern templates [C++11]
+
+- Allows the compiler not to instantiate the template in this translation unit. Will be instantiated in another unit.
+- Reduces compile time.
+
+```cpp
+extern template class std::vector<Cls>;
 ```
 
 # Deprecated Features
