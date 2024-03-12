@@ -54,10 +54,14 @@
   - [Generate default function [C++11]](#generate-default-function-c11)
   - [Explicit delete default function [C++11]](#explicit-delete-default-function-c11)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-c11)
-  - [Other interesting parts](#Other-interesting-parts)
-    - [R-Values [C++11]](#R-Values-C11)
-    - [Move constructors [C++11]](#Move-constructors-C11)
-    - [Extern templates [C++11]](#Extern-templates-c11)
+- [Other interesting parts](#Other-interesting-parts)
+  - [R-Values [C++11]](#R-Values-C11)
+  - [Move constructors [C++11]](#Move-constructors-C11)
+- [Templates](#Templates)
+  - [Extern templates [C++11]](#Extern-templates-c11)
+  - [Right angle bracket [C++11]](#Right-angle-bracket-c11)
+  - [Template aliases [C++11]](#Template-aliases-c11)
+  - [Variadic template [C++11]](#Variadic-template-c11)
 - [Deprecated Features](#deprecated-features)
 
 # Constants
@@ -945,6 +949,7 @@ Status s1 = ON; // Error
 Status s2 = Status::ON; // Error
 Status s3 = 0: // Error
 ```
+
 # Other interesting parts
 
 ## R-Values [C++11]
@@ -977,6 +982,9 @@ class Cls {
         uint8_t *ptr = nullptr;
 };
 ```
+
+# Templates
+
 ## Extern templates [C++11]
 
 - Allows the compiler not to instantiate the template in this translation unit. Will be instantiated in another unit.
@@ -984,6 +992,73 @@ class Cls {
 
 ```cpp
 extern template class std::vector<Cls>;
+```
+
+## Right angle bracket [C++11]
+
+Finally! We can close several templates at once without separating the '>' symbol.
+
+```cpp
+std::vector<std::vector<std::vector<std::vector<std::vector<int>>>>> vec; // This is finally valid instead of 
+                                                                          // std::vector<std::vector<std::vector<std::vector<std::vector<int> > > > >
+```
+
+## Template aliases [C++11]
+
+Before C++11 we could not typedef aliases. Now we can with the reserved word ```using``` that simplifies typedefs.
+
+```cpp
+// Using syntax is simpler than typedef syntax
+typedef std::vector<int> vecInt;
+
+using vecInt = std::vector<int>;
+
+//-------------------------------------
+
+template <typename A, typename B>
+struct Template { ... };
+
+// We could not do this in C++03
+template <typename B>
+using TemplateInt = Template<int, B>;
+```
+
+## Variadic template [C++11]
+
+Allows you to create functions or classes that can take an arbitrary number of arguments of different types.
+
+```cpp
+template<typename... Values>                class tuple;    // takes zero or more arguments
+template<typename Head, typename... Tail>   class tuple;    // takes one  or more arguments
+
+//-------------------------------------
+// Example: print
+//-------------------------------------
+template<typename T>
+void print(T value) {
+    std::cout << value << std::endl;
+}
+
+template<typename T, typename... Args>
+void print(T first, Args... rest) {
+    std::cout << first << std::endl;
+    print(rest...); // Recursive call to print the rest of the arguments
+}
+
+//-------------------------------------
+// Example: sum
+//-------------------------------------
+template<typename Head>
+Head sum(Head value) {
+    return value;
+}
+
+template<typename Head, typename ...Tail>
+Head sum(Head head, Tail ...tail) {
+  return head + sum(tail...);
+}
+
+auto res = sum(1, 2.61f, 3.42, true);   // int res = 8;
 ```
 
 # Deprecated Features
