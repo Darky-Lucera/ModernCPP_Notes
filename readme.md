@@ -1,14 +1,14 @@
 # Modern C++
 
 - [Constants](#constants)
-  - [nullptr_t and nullptr [C++11]](#nullptr_t-and-nullptr-c11)
-  - [constexpr [C++11]](#constexpr-c11)
-  - [constinit [C++20]](#constinit-c20)
-  - [consteval [C++20]](#consteval-c20)
-  - [std::is_constant_evaluated [C++20]](#stdis_constant_evaluated-c20)
+  - [nullptr_t and nullptr [C++11]](#nullptr_t-and-nullptr-C11)
+  - [constexpr [C++11]](#constexpr-C11)
+  - [constinit [C++20]](#constinit-C20)
+  - [consteval [C++20]](#consteval-C20)
+  - [std::is_constant_evaluated [C++20]](#stdis_constant_evaluated-C20)
 - [Literals](#literals)
-  - [Binary Literals [C++14]](#binary-literals-c14)
-  - [Digit separators [C++14]](#digit-separators-c14)
+  - [Binary Literals [C++14]](#binary-literals-C14)
+  - [Digit separators [C++14]](#digit-separators-C14)
   - [Standard literals](#standard-literals)
     - [Integer literals](#integer-literals)
     - [Floating point literals](#floating-point-literals)
@@ -17,23 +17,23 @@
     - [Raw string literal](#raw-string-literal)
     - [Complex numbers literals](#complex-numbers-literals)
     - [Chrono literals](#chrono-literals)
-  - [User-defined literals [C++11]](#user-defined-literals-c11)
+  - [User-defined literals [C++11]](#user-defined-literals-C11)
 - [Initialization](#Initialization)
   - [Initializer lists [C++11]](#Initializer-lists-C11)
   - [Uniform initialization [C++11]](#Uniform-initialization-C11)
-  - [Designated Initializers [C++20]](#Designated-Initializers-c20)
+  - [Designated Initializers [C++20]](#Designated-Initializers-C20)
 - [Type inference](#type-inference)
-  - [auto [C++11]](#auto-c11)
-  - [decltype(...) [C++11]](#decltype-c11)
-  - [decltype(auto) [C++14]](#decltypeauto-c14)
-  - [Tail type [C++11]](#tail-type-c11)
+  - [auto [C++11]](#auto-C11)
+  - [decltype(...) [C++11]](#decltype-C11)
+  - [decltype(auto) [C++14]](#decltypeauto-C14)
+  - [Tail type [C++11]](#tail-type-C11)
 - [Control flow enhancements](#control-flow-enhancements)
-  - [Range-based for loop [C++11]](#range-based-for-loop-c11)
-  - [Range-based for loop with initializer [C++20]](#range-based-for-loop-with-initializer-c20)
-  - [if with initializer [C++17]](#if-with-initializer-c17)
-  - [if constexpr [C++17]](#if-constexpr-c17)
-  - [if consteval [C++23]](#if-consteval-c23)
-  - [switch with initializer [C++17]](#switch-with-initializer-c17)
+  - [Range-based for loop [C++11]](#range-based-for-loop-C11)
+  - [Range-based for loop with initializer [C++20]](#range-based-for-loop-with-initializer-C20)
+  - [if with initializer [C++17]](#if-with-initializer-C17)
+  - [if constexpr [C++17]](#if-constexpr-C17)
+  - [if consteval [C++23]](#if-consteval-C23)
+  - [switch with initializer [C++17]](#switch-with-initializer-C17)
 - [Lambdas](#lambdas)
   - [Lambda Expressions [C++11]](#Lambda-Expressions-C11)
   - [Default parameters [C++14]](#Default-parameters-C14)
@@ -44,24 +44,28 @@
   - [Constexpr Lambda Expressions [C++17]](#Constexpr-Lambda-Expressions-C17)
   - [Templatized lambdas [C++20]](#Templatized-lambdas-C20)
 - [Object Oriented](#object-oriented)
-  - [Initializing class member variables [C++11]](#initializing-class-member-variables-c11)
-  - [Initializing static class member variables [C++17]](#initializing-static-class-member-variables-c17)
-  - [Delegate constructor [C++11]](#delegate-constructor-c11)
-  - [Inherit constructors [C++11]](#inherit-constructors-c11)
-  - [Explicit virtual function override [C++11]](#explicit-virtual-function-override-c11)
-  - [final [C++11]](#final-c11)
-  - [Operator spaceship <=> (3 way comparator) [C++20]](#operator-spaceship--3-way-comparator-c20)
-  - [Generate default function [C++11]](#generate-default-function-c11)
-  - [Explicit delete default function [C++11]](#explicit-delete-default-function-c11)
-  - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-c11)
+  - [Initializing class member variables [C++11]](#initializing-class-member-variables-C11)
+  - [Initializing static class member variables [C++17]](#initializing-static-class-member-variables-C17)
+  - [Delegate constructor [C++11]](#delegate-constructor-C11)
+  - [Inherit constructors [C++11]](#inherit-constructors-C11)
+  - [Explicit virtual function override [C++11]](#explicit-virtual-function-override-C11)
+  - [final [C++11]](#final-C11)
+  - [Operator spaceship <=> (3 way comparator) [C++20]](#operator-spaceship--3-way-comparator-C20)
+  - [Generate default function [C++11]](#generate-default-function-C11)
+  - [Explicit delete default function [C++11]](#explicit-delete-default-function-C11)
+  - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-C11)
 - [Other interesting parts](#Other-interesting-parts)
   - [R-Values [C++11]](#R-Values-C11)
   - [Move constructors [C++11]](#Move-constructors-C11)
+  - [Explicit conversion operators [C++11]](#Explicit-conversion-operators-C11)
+  - [Static assertions [C++11]](#Static-assertions-C11)
+  - [Allow sizeof to work on members of classes without an explicit object [C++11]](#Allow-sizeof-to-work-on-members-of-classes-without-an-explicit-object-C11)
+  - [Control and query object alignment [C++11]](#Control-and-query-object-alignment-C11)
 - [Templates](#Templates)
-  - [Extern templates [C++11]](#Extern-templates-c11)
-  - [Right angle bracket [C++11]](#Right-angle-bracket-c11)
-  - [Template aliases [C++11]](#Template-aliases-c11)
-  - [Variadic template [C++11]](#Variadic-template-c11)
+  - [Extern templates [C++11]](#Extern-templates-C11)
+  - [Right angle bracket [C++11]](#Right-angle-bracket-C11)
+  - [Template aliases [C++11]](#Template-aliases-C11)
+  - [Variadic template [C++11]](#Variadic-template-C11)
 - [Deprecated Features](#deprecated-features)
 
 # Constants
@@ -107,6 +111,9 @@ Example:
 ```cpp
 constexpr float pi = 3.14f;         // constexpr value
 
+constexpr double earthGravity = 9.8;
+constexpr double moonGravitay = earthGravity / 6.0; // We cannot do this with const in c++03
+
 // C++11 allows only non-complex computations
 constexpr int add(int a, int b) {
     return a + b;
@@ -134,7 +141,7 @@ int arrayA[resultA];                            // OK
 int arrayB[resultB];                            // Error
 int arrayC[resultC];                            // Error
 
-// C++17 allows constexpr lambda functions (see lambda functions)
+// C++17 allows constexpr lambda functions (see #lambdas)
 auto identity = [](int n) constexpr { return n; };
 
 // C++20 allows constexpr virtual functions
@@ -983,6 +990,82 @@ class Cls {
 };
 ```
 
+## Explicit conversion operators [C++11]
+
+When you declare a conversion operator with the explicit keyword, it prevents the compiler from performing implicit conversions using that operator.
+
+```cpp
+struct Bool {
+    explicit Bool(bool v) : value(v) {}
+
+    explicit operator bool() const { return value; }
+    explicit operator std::string() const { return value ? "true" : "false"; }
+
+    bool value {};
+};
+
+Bool    b1 { true };    // Ok
+Bool    b2 = { true };  // Error: constructor is explicit
+Bool    b3 = true;      // Error: constructor is explicit
+
+if (b1) {
+    printf("Ok!\n");
+}
+
+// Error: operator bool is explicit. No automatic conversion to bool, that is 0 or 1, and then automatic conversion to int.
+if (b1 < 123) {
+    printf("Noooo!\n");
+}
+
+std::string str = b1;   // Error: operator std::string() is explicit
+std::string str = static_cast<std::string>(b1); // explicit cast is alowed
+```
+
+## Static assertions [C++11]
+
+Before C++11, there were two ways to check assertions, macro assert in the header ```<assert.h>``` / ```<cassert>```, and the preprocessor word ```#error``` but they didn't work well with templates.
+The checks happened either too early (before templates were set up) or too late (after the program was running).
+
+C++11 introduces the keyword ```static_assert``` to solve this issues.
+
+```cpp
+static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields")
+
+template<class Integral>
+Integral foo(Integral x) {
+    static_assert(std::is_integral<Integral>::value, "foo() parameter must be an integral type.");
+}
+```
+
+## Allow sizeof to work on members of classes without an explicit object [C++11]
+
+```cpp
+struct A {
+    ...
+    Class   cls;
+    ...
+};
+
+ptr += sizeof(A::cls);
+```
+
+## Control and query object alignment [C++11]
+
+C++11 allows variable alignment to be queried ```alignof``` and controlled ```alignas```.
+
+The ```alignof``` operator takes the type and returns the power of 2 byte boundary on which the type instances must be allocated.
+For references, it returns the referenced type's alignment.
+For arrays, it returns the element type's alignment.
+
+The ```alignas``` specifier controls the memory alignment for a variable.
+```alignas(T)``` is shorthand for ```alignas(alignof(T))```.
+
+```cpp
+alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
+```
+
+
+
 # Templates
 
 ## Extern templates [C++11]
@@ -999,7 +1082,7 @@ extern template class std::vector<Cls>;
 Finally! We can close several templates at once without separating the '>' symbol.
 
 ```cpp
-std::vector<std::vector<std::vector<std::vector<std::vector<int>>>>> vec; // This is finally valid instead of 
+std::vector<std::vector<std::vector<std::vector<std::vector<int>>>>> vec; // This is finally valid instead of
                                                                           // std::vector<std::vector<std::vector<std::vector<std::vector<int> > > > >
 ```
 
