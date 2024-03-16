@@ -53,6 +53,8 @@
   - [Operator spaceship <=> (3 way comparator) [C++20]](#operator-spaceship--3-way-comparator-C20)
   - [Generate default function [C++11]](#generate-default-function-C11)
   - [Explicit delete default function [C++11]](#explicit-delete-default-function-C11)
+  - [Ref qualifiers [C++11]](#Ref-qualifiers-c11)
+  - [Explicit object member functions [C++23]](#Explicit-object-member-functions-c23)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-C11)
 - [Other interesting parts](#Other-interesting-parts)
   - [R-Values [C++11]](#R-Values-C11)
@@ -942,6 +944,76 @@ struct A {
     A & operator = (const A &); // Not implemented anywere (get a compiler error if someone tries to use it)
 };
 ```
+
+## Ref qualifiers [C++11]
+
+With this feature we can indicate when we want to use a class function for l-values or r-values.
+
+```cpp
+struct Cls {
+    void foo() &        { printf("lvalue\n");       }
+    void foo() &&       { printf("rvalue\n");       }
+    void foo() const &  { printf("const lvalue\n"); }
+    void foo() const && { printf("const rvalue\n"); }
+};
+
+const Cls getCls() { return Cls(); }
+
+int main() {
+    Cls       cls;
+    const Cls cCls;
+
+    cls.foo();      // lvalue
+    cCls.foo();     // rvalue
+
+    Cls().foo();    // rvalue
+    getCls().foo(); // const rvalue
+
+    return 0;
+}
+```
+
+## Explicit object member functions [C++23]
+
+C++23 introduces clearer syntax for Ref qualifiers.
+
+```cpp
+struct Cls {
+    void foo() &                    { printf("foo lvalue\n");       }   // C++11
+    void foo() &&                   { printf("foo rvalue\n");       }   // C++11
+    void foo() const &              { printf("foo const lvalue\n"); }   // C++11
+    void foo() const &&             { printf("foo const rvalue\n"); }   // C++11
+
+    void bar(this Cls &self)        { printf("bar lvalue\n");       }   // C++23
+    void bar(this Cls &&self)       { printf("bar rvalue\n");       }   // C++23
+    void bar(this const Cls &self)  { printf("bar const lvalue\n"); }   // C++23
+    void bar(this const Cls &&self) { printf("bar const rvalue\n"); }   // C++23
+};
+
+const Cls getCls() { return Cls(); }
+
+int main() {
+    Cls       cls;
+    const Cls cCls;
+
+    cls.foo();      // lvalue
+    cCls.foo();     // rvalue
+
+    Cls().foo();    // rvalue
+    getCls().foo(); // const rvalue
+
+    //--
+
+    cls.bar();      // lvalue
+    cCls.bar();     // rvalue
+
+    Cls().bar();    // rvalue
+    getCls().bar(); // const rvalue
+
+    return 0;
+}
+```
+
 
 ## Strongly typed enumerations [C++11]
 
