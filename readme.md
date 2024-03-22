@@ -43,11 +43,18 @@
   - [Capture of this [C++17]](#Capture-of-this-C17)
   - [Constexpr Lambda Expressions [C++17]](#Constexpr-Lambda-Expressions-C17)
   - [Templatized lambdas [C++20]](#Templatized-lambdas-C20)
+- [Other interesting parts](#Other-interesting-parts)
+  - [R-Values [C++11]](#R-Values-C11)
+  - [Static assertions [C++11]](#Static-assertions-C11)
+  - [Allow sizeof to work on members of classes without an explicit object [C++11]](#Allow-sizeof-to-work-on-members-of-classes-without-an-explicit-object-C11)
+  - [Control and query object alignment [C++11]](#Control-and-query-object-alignment-C11)
 - [Object Oriented](#object-oriented)
   - [Initializing class member variables [C++11]](#initializing-class-member-variables-C11)
   - [Initializing static class member variables [C++17]](#initializing-static-class-member-variables-C17)
   - [Delegate constructor [C++11]](#delegate-constructor-C11)
   - [Inherit constructors [C++11]](#inherit-constructors-C11)
+  - [Move constructors [C++11]](#Move-constructors-C11)
+  - [Explicit conversion operators [C++11]](#Explicit-conversion-operators-C11)
   - [Explicit virtual function override [C++11]](#explicit-virtual-function-override-C11)
   - [final [C++11]](#final-C11)
   - [Operator spaceship <=> (3 way comparator) [C++20]](#operator-spaceship--3-way-comparator-C20)
@@ -56,13 +63,6 @@
   - [Ref qualifiers [C++11]](#Ref-qualifiers-c11)
   - [Explicit object member functions [C++23]](#Explicit-object-member-functions-c23)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-C11)
-- [Other interesting parts](#Other-interesting-parts)
-  - [R-Values [C++11]](#R-Values-C11)
-  - [Move constructors [C++11]](#Move-constructors-C11)
-  - [Explicit conversion operators [C++11]](#Explicit-conversion-operators-C11)
-  - [Static assertions [C++11]](#Static-assertions-C11)
-  - [Allow sizeof to work on members of classes without an explicit object [C++11]](#Allow-sizeof-to-work-on-members-of-classes-without-an-explicit-object-C11)
-  - [Control and query object alignment [C++11]](#Control-and-query-object-alignment-C11)
 - [Templates](#Templates)
   - [Extern templates [C++11]](#Extern-templates-C11)
   - [Right angle bracket [C++11]](#Right-angle-bracket-C11)
@@ -781,6 +781,63 @@ auto Pow = [](T base, T exponent) {
 };
 ```
 
+# Other interesting parts
+
+## R-Values [C++11]
+
+- An **rvalue** reference is a special type of reference that can bind to **temporary objects**.
+- Rvalue references are denoted by the double ampersand (**&&**).
+- They allow you to identify and distinguish temporary objects from regular ones.
+
+```cpp
+int a = 3;
+int b = 4;
+int &&rvalue = a + b;
+```
+
+## Static assertions [C++11]
+
+Before C++11, there were two ways to check assertions, macro assert in the header ```<assert.h>``` / ```<cassert>```, and the preprocessor word ```#error``` but they didn't work well with templates.
+The checks happened either too early (before templates were set up) or too late (after the program was running).
+
+C++11 introduces the keyword ```static_assert``` to solve this issues.
+
+```cpp
+static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields")
+
+template<class Integral>
+Integral foo(Integral x) {
+    static_assert(std::is_integral<Integral>::value, "foo() parameter must be an integral type.");
+}
+```
+
+## Allow sizeof to work on members of classes without an explicit object [C++11]
+
+```cpp
+struct A {
+    ...
+    Class   cls;
+    ...
+};
+
+ptr += sizeof(A::cls);
+```
+
+## Control and query object alignment [C++11]
+
+C++11 allows variable alignment to be queried ```alignof``` and controlled ```alignas```.
+
+The ```alignof``` operator takes the type and returns the power of 2 byte boundary on which the type instances must be allocated.
+For references, it returns the referenced type's alignment.
+For arrays, it returns the element type's alignment.
+
+The ```alignas``` specifier controls the memory alignment for a variable.
+```alignas(T)``` is shorthand for ```alignas(alignof(T))```.
+
+```cpp
+alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
+```
+
 # Object Oriented
 
 ## Initializing class member variables [C++11]
@@ -833,6 +890,56 @@ struct B : public A {
 
 B b1;
 B b2(123);
+```
+
+## Move constructors [C++11]
+
+- A move constructor is a special type of constructor that allows the efficient transfer of resources (like memory ownership) from a temporary object to another object.
+- It's invoked automatically when you initialize an object with an rvalue.
+- Move constructors are typically used to avoid unnecessary copies of objects, improving performance.
+
+```cpp
+class Cls {
+  public:
+    Cls()                 { ptr = new uint8_t; *ptr = 0;          } // Creates and initializes a pointer
+    Cls(const Cls &other) { ptr = new uint8_t; *ptr = *other.ptr; } // Creates a pointer and copies the values of other object's pointer
+    Cls(Cls &&other)      { std::swap(ptr, other.ptr);            } // Steals the other object's pointer because it's temporary and will be destroyed
+    ~Cls()                { if (ptr != nullptr) delete ptr;       } // Destroys the pointer
+
+  protected:
+        uint8_t *ptr = nullptr;
+};
+```
+
+## Explicit conversion operators [C++11]
+
+When you declare a conversion operator with the explicit keyword, it prevents the compiler from performing implicit conversions using that operator.
+
+```cpp
+struct Bool {
+    explicit Bool(bool v) : value(v) {}
+
+    explicit operator bool() const { return value; }
+    explicit operator std::string() const { return value ? "true" : "false"; }
+
+    bool value {};
+};
+
+Bool    b1 { true };    // Ok
+Bool    b2 = { true };  // Error: constructor is explicit
+Bool    b3 = true;      // Error: constructor is explicit
+
+if (b1) {
+    printf("Ok!\n");
+}
+
+// Error: operator bool is explicit. No automatic conversion to bool, that is 0 or 1, and then automatic conversion to int.
+if (b1 < 123) {
+    printf("Noooo!\n");
+}
+
+std::string str = b1;   // Error: operator std::string() is explicit
+std::string str = static_cast<std::string>(b1); // explicit cast is alowed
 ```
 
 ## Explicit virtual function override [C++11]
@@ -1028,115 +1135,6 @@ Status s1 = ON; // Error
 Status s2 = Status::ON; // Error
 Status s3 = 0: // Error
 ```
-
-# Other interesting parts
-
-## R-Values [C++11]
-
-- An **rvalue** reference is a special type of reference that can bind to **temporary objects**.
-- Rvalue references are denoted by the double ampersand (**&&**).
-- They allow you to identify and distinguish temporary objects from regular ones.
-
-```cpp
-int a = 3;
-int b = 4;
-int &&rvalue = a + b;
-```
-
-## Move constructors [C++11]
-
-- A move constructor is a special type of constructor that allows the efficient transfer of resources (like memory ownership) from a temporary object to another object.
-- It's invoked automatically when you initialize an object with an rvalue.
-- Move constructors are typically used to avoid unnecessary copies of objects, improving performance.
-
-```cpp
-class Cls {
-  public:
-    Cls()                 { ptr = new uint8_t; *ptr = 0;          } // Creates and initializes a pointer
-    Cls(const Cls &other) { ptr = new uint8_t; *ptr = *other.ptr; } // Creates a pointer and copies the values of other object's pointer
-    Cls(Cls &&other)      { std::swap(ptr, other.ptr);            } // Steals the other object's pointer because it's temporary and will be destroyed
-    ~Cls()                { if (ptr != nullptr) delete ptr;       } // Destroys the pointer
-
-  protected:
-        uint8_t *ptr = nullptr;
-};
-```
-
-## Explicit conversion operators [C++11]
-
-When you declare a conversion operator with the explicit keyword, it prevents the compiler from performing implicit conversions using that operator.
-
-```cpp
-struct Bool {
-    explicit Bool(bool v) : value(v) {}
-
-    explicit operator bool() const { return value; }
-    explicit operator std::string() const { return value ? "true" : "false"; }
-
-    bool value {};
-};
-
-Bool    b1 { true };    // Ok
-Bool    b2 = { true };  // Error: constructor is explicit
-Bool    b3 = true;      // Error: constructor is explicit
-
-if (b1) {
-    printf("Ok!\n");
-}
-
-// Error: operator bool is explicit. No automatic conversion to bool, that is 0 or 1, and then automatic conversion to int.
-if (b1 < 123) {
-    printf("Noooo!\n");
-}
-
-std::string str = b1;   // Error: operator std::string() is explicit
-std::string str = static_cast<std::string>(b1); // explicit cast is alowed
-```
-
-## Static assertions [C++11]
-
-Before C++11, there were two ways to check assertions, macro assert in the header ```<assert.h>``` / ```<cassert>```, and the preprocessor word ```#error``` but they didn't work well with templates.
-The checks happened either too early (before templates were set up) or too late (after the program was running).
-
-C++11 introduces the keyword ```static_assert``` to solve this issues.
-
-```cpp
-static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields")
-
-template<class Integral>
-Integral foo(Integral x) {
-    static_assert(std::is_integral<Integral>::value, "foo() parameter must be an integral type.");
-}
-```
-
-## Allow sizeof to work on members of classes without an explicit object [C++11]
-
-```cpp
-struct A {
-    ...
-    Class   cls;
-    ...
-};
-
-ptr += sizeof(A::cls);
-```
-
-## Control and query object alignment [C++11]
-
-C++11 allows variable alignment to be queried ```alignof``` and controlled ```alignas```.
-
-The ```alignof``` operator takes the type and returns the power of 2 byte boundary on which the type instances must be allocated.
-For references, it returns the referenced type's alignment.
-For arrays, it returns the element type's alignment.
-
-The ```alignas``` specifier controls the memory alignment for a variable.
-```alignas(T)``` is shorthand for ```alignas(alignof(T))```.
-
-```cpp
-alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
-```
-
-
 
 # Templates
 
