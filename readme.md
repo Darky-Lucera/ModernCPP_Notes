@@ -63,6 +63,7 @@
   - [Ref qualifiers [C++11]](#Ref-qualifiers-c11)
   - [Explicit object member functions [C++23]](#Explicit-object-member-functions-c23)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-C11)
+  - [Multidimensional subscript operator [C++23]](#Multidimensional-subscript-operator-C23)
 - [Templates](#Templates)
   - [Extern templates [C++11]](#Extern-templates-C11)
   - [Right angle bracket [C++11]](#Right-angle-bracket-C11)
@@ -608,6 +609,7 @@ auto getValue(T t) {
 ## if consteval [C++23]
 
 Evaluates to true if we are at compile time.
+Notice that braces are mandatory: ```if consteval { } else { }```
 
 ```cpp
 // Used by ipow
@@ -633,6 +635,8 @@ constexpr uint64_t ipow(uint64_t base, uint8_t exp) {
     return std::pow(base, exp);
 }
 ```
+
+**Note**: The alternative for C++20 if using the function [std::is_constant_evaluated()](https://en.cppreference.com/w/cpp/types/is_constant_evaluated)
 
 ## switch with initializer [C++17]
 
@@ -1121,6 +1125,43 @@ int main() {
 }
 ```
 
+And since C++23 we can 'deduce this' using a template to simplify the code:
+
+```cpp
+struct Cls {
+    // A lot of boilerplate
+    std::string &       getName(this Cls &self)        { return mName; }                // C++23
+    const std::string & getName(this const Cls &self)  { return mName; }                // C++23
+    std::string &&      getName(this Cls &&self)       { return std::move(mName); }     // C++23
+
+    // Better using 'deducing this'
+    template <typename Self>
+    auto && getName(this Self &&self)                   { return std::forward(mName); } // C++23
+
+    std::string mName;
+};
+```
+
+Another nice use of 'deduce this' is making recursive lambdas:
+
+```cpp
+// C++14 version
+auto fibonacci14 = [](const auto &fibonacci, int n) -> long {
+  return n < 2 ? n : fibonacci(fibonacci, n-1) + fibonacci(fibonacci, n-2);
+};
+
+// But it is a little bit ugly
+auto a = fibonacci14(fibonacci14, 5);
+
+//--
+
+// C++23 version using deduce this
+auto fibonacci23 = [](this auto &fibonacci, int n) -> long {
+    return (n < 2) ? n : fibonacci(n-1) + fibonacci(n-2);
+};
+
+auto a = fibonacci23(5);
+```
 
 ## Strongly typed enumerations [C++11]
 
@@ -1134,6 +1175,20 @@ enum class Status : uint8_t {
 Status s1 = ON; // Error
 Status s2 = Status::ON; // Error
 Status s3 = 0: // Error
+```
+
+# Multidimensional subscript operator [C++23]
+
+```cpp
+// Instead of having to use data[x][y][z]
+// Now we can have multiple indexes
+T &         operator[](size_t x, size_t y, size_t z)        { }
+const T &   operator[](size_t x, size_t y, size_t z) const  { }
+
+// and use it that way:
+data[x, y, z] = 123;
+
+auto value = data[x, y, z];
 ```
 
 # Templates
