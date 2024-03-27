@@ -1,5 +1,6 @@
 # Modern C++
 
+- [preprocessor directives](#Preprocessor-directives)
 - [Constants](#constants)
   - [nullptr_t and nullptr [C++11]](#nullptr_t-and-nullptr-C11)
   - [constexpr [C++11]](#constexpr-C11)
@@ -48,6 +49,8 @@
   - [Static assertions [C++11]](#Static-assertions-C11)
   - [Allow sizeof to work on members of classes without an explicit object [C++11]](#Allow-sizeof-to-work-on-members-of-classes-without-an-explicit-object-C11)
   - [Control and query object alignment [C++11]](#Control-and-query-object-alignment-C11)
+  - [Thread Local Storage (TLS) [C++11]](#Thread-Local-Storage-TLS-C11)
+  - [Attributes [C++11]](#Attributes-c11)
 - [Object Oriented](#object-oriented)
   - [Initializing class member variables [C++11]](#initializing-class-member-variables-C11)
   - [Initializing static class member variables [C++17]](#initializing-static-class-member-variables-C17)
@@ -70,6 +73,124 @@
   - [Template aliases [C++11]](#Template-aliases-C11)
   - [Variadic template [C++11]](#Variadic-template-C11)
 - [Deprecated Features](#deprecated-features)
+
+# Preprocessor directives
+
+Since the additions in this section are very few, I have decided to add most of the directives in this section.
+
+[**Conditionally compile**](https://en.cppreference.com/w/cpp/preprocessor/conditional):
+
+```cpp
+#if     expression
+#ifdef  id      // #if  defined(id)
+#ifndef id      // #if !defined(id)
+#elif   expression
+#else
+#endif
+
+// New
+#elifdef    id  // #elif  defined(id)   [C++23]
+#elifndef   id  // #elif !defined(id)   [C++23]
+```
+
+[**Macros**](https://en.cppreference.com/w/cpp/preprocessor/replace):
+
+```cpp
+#define id              [expressions]
+#define id(params)      [expressions]
+#define id(params, ...) [expressions] // [C++11] We can use __VA_OPT__() and __VA_ARGS__ to manage the ellipsis
+#define id(...)         [expressions] // [C++11] We can use __VA_OPT__() and __VA_ARGS__ to manage the ellipsis
+#undef  id
+
+// __VA_ARGS__ is not always available before C++11.
+// __VA_OPT__ is available since C++20.
+
+#define LOG(msg, ...) printf("[" __FILE__ ":%s:%d] " msg, __func__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+```
+
+**Operators**
+
+- Operator Stringification **#**: Converts a token to a string.
+- Operator Concatenation  **##**: Concatenates two strings.
+
+```cpp
+#define kStringify(x)    #x
+#define kConcat(x, y)    x##y
+
+int result = kConcat(num, 1) + kConcat(num, 2);
+
+printf("%s = %d\n", kStringify(result), result);
+```
+
+[**Include**](https://en.cppreference.com/w/cpp/preprocessor/include):
+
+```cpp
+#include <header>           // global
+#include "header"           // local
+#__has_include(<header>)    // global [C++17]
+#__has_include("header")    // local  [C++17]
+
+#if defined(__has_include)
+  #if __has_include (<stdatomic.h>)
+    #include <stdatomic.h>
+  #endif
+#endif
+```
+
+[**Diagnostic directives**](https://en.cppreference.com/w/cpp/preprocessor/error):
+
+```cpp
+#warning    "message"   //                      [C++23]
+#error      "message"   //                      [C++98]
+```
+
+[**Implementation defined behavior control**](https://en.cppreference.com/w/cpp/preprocessor/impl):
+
+```cpp
+#pragma name                // Usually name is compiler specific
+_Pragma(string)             // Allows using pragma inside macros [C++11]
+
+#pragma once
+
+#pragma pack(value)         // Sets the current alignment to value
+#pragma pack()              // Sets the current alignment to the default value
+#pragma pack(push)          // Stores the current alignment value
+#pragma pack(push, value)   // Stores the current alignment and sets it to 'value'
+#pragma pack(pop)           // Restores the last alignment value
+```
+
+[**Predefined macros**](https://en.cppreference.com/w/cpp/preprocessor/replace#Predefined_macros):
+
+Sadly, not all compilers define them. So we cannot trust them.
+
+[List of some of non-standard predefined macros](https://sourceforge.net/p/predef/wiki/Home/)
+[C++ Macros](https://en.cppreference.com/w/cpp/symbol_index/macro)
+
+```
+__cplusplus
+__STDC_HOSTED__                     [C++11]
+__LINE__
+__FILE__
+__DATE__
+__TIME__
+__func__                            Current function name. GCC, Clang, MSVC 2012+, Intel
+__FUNCTION__                        Current function name. Not standard
+__FUNCDNAME__                       Current function name. Not standard
+__PRETTY_FUNCTION__                 Current function name. Not standard [GCC]
+__FUNCSIG__                         Current function name. Not standard [MSVC]
+__STDCPP_DEFAULT_NEW_ALIGNMENT__    [C++17]
+__STDCPP_­BFLOAT16_T__               [C++23]
+__STDCPP_­FLOAT16_T__                [C++23]
+__STDCPP_FLOAT32_T__                [C++23]
+__STDCPP_FLOAT64_T__                [C++23]
+__STDCPP_FLOAT128_T__               [C++23]
+__STDC__
+__STDC_VERSION__                    [C++11]
+__STDC_ISO_10646__                  [C++11]
+__STDC_MB_MIGHT_NEQ_WC__            [C++11]
+__STDCPP_THREADS__                  [C++11]
+__STDCPP_STRICT_POINTER_SAFETY__    [C++11]
+```
 
 # Constants
 
@@ -841,6 +962,85 @@ The ```alignas``` specifier controls the memory alignment for a variable.
 ```cpp
 alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
 ```
+
+## Thread Local Storage (TLS) [C++11]
+
+Allows each thread to have its own separate instance of a variable.<br/>
+It also works for **static** variables defined inside a function. Each thread will have its own instance of the **per thread global** variable.
+
+- **Lifetime**: The lifetime of a TLS variable begins when it is initialized and ends when the thread terminates.
+- **Visibility**: TLS variables have visibility at the thread level.
+- **Scope**: TLS variables have scope depending on where they are declared.
+
+```cpp
+void log(const char *name) {
+    thread_local int count{};
+
+    printf("%s: %d\n", name, count++);
+}
+
+thread_local int inc {};
+
+void
+doCount(const char *name, int count, int &ref) {
+    for (int i=0; i<count; ++i) {
+        ++inc;  // Increases its local copy
+        log(name);
+    }
+
+    ref = inc;  // inc is local copy
+}
+
+int 
+main() {
+    int     a{}, b{};
+
+    std::thread ta([&a] { doCount("ta", 10, a); }); // std::thread was introduced in C++11
+    std::thread tb([&b] { doCount("tb", 20, b); });
+
+    tb.join();
+    ta.join();
+
+    printf("a=%d, b=%d, inc=%d\n", a, b, inc);  // a=10, b=20, inc=0
+
+    return 0;
+}
+```
+
+## Attributes [C++11]
+
+Provide a unified standard syntax for implementation-defined language extensions. Before this feature, each compiler has its own way to do it: 
+ - GNU/Clang: __attribute__((...))
+ - Microsoft: __declspec(...)
+ - Borland: __property
+ - Different compilers: __builtin_XXX
+
+The new standar way is: ```[[attribute, attribute...]]```.
+ 
+These are the standard attributes:
+
+```
+- [[noreturn]]              [C++11]	Indicates that the function does not return.
+- [[carries_dependency]]    [C++11]	Indicates that dependency chain in release-consume std::memory_order propagates in and out of the function.
+- [[deprecated]]            [C++14] Indicates that the use of the name or entity declared with this attribute is allowed, but discouraged for some reason.
+  [[deprecated("reason")]]  [C++14]	
+- [[fallthrough]]           [C++17]	Indicates that the fall through from the previous case label (switch statement) is intentional and should not be diagnosed by a compiler that warns on fall-through.
+- [[nodiscard]]             [C++17] Encourages the compiler to issue a warning if the return value is discarded.
+  [[nodiscard("reason")]]   [C++20]	
+- [[maybe_unused]]          [C++17]	Suppresses compiler warnings on unused entities, if any.
+- [[likely]]                [C++20]
+- [[unlikely]]              [C++20]	Indicates that the compiler should optimize for the case where a path of execution through a statement is more or less likely than any other path of execution.
+- [[no_unique_address]]     [C++20]	Indicates that a non-static data member need not have an address distinct from all other non-static data members of its class.
+- [[assume(expression)]]    [C++23]	Specifies that the expression will always evaluate to true at a given point.
+```
+
+Each compiler/library can create its own attributes inside a namespace:
+- **Microsoft**: [[msvc::attribute]]
+- **Guidelines Support Library**: [[gls::attribute]]
+- **GNU**: [[gnu::attribute]]
+- **Clang**: [[clang::attribute]]
+
+Since C++17 we can use ```[using namespace: atribute, attribute, ...]```.
 
 # Object Oriented
 
