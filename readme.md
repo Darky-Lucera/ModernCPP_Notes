@@ -1,6 +1,6 @@
 # Modern C++
 
-- [preprocessor directives](#Preprocessor-directives)
+- [preprocessor directives](#preprocessor-directives)
 - [Constants](#constants)
   - [nullptr_t and nullptr [C++11]](#nullptr_t-and-nullptr-C11)
   - [constexpr [C++11]](#constexpr-C11)
@@ -19,7 +19,7 @@
     - [Complex numbers literals](#complex-numbers-literals)
     - [Chrono literals](#chrono-literals)
   - [User-defined literals [C++11]](#user-defined-literals-C11)
-- [Initialization](#Initialization)
+- [Initialization](#initialization)
   - [Initializer lists [C++11]](#Initializer-lists-C11)
   - [Uniform initialization [C++11]](#Uniform-initialization-C11)
   - [Designated Initializers [C++20]](#Designated-Initializers-C20)
@@ -44,7 +44,7 @@
   - [Capture of this [C++17]](#Capture-of-this-C17)
   - [Constexpr Lambda Expressions [C++17]](#Constexpr-Lambda-Expressions-C17)
   - [Templatized lambdas [C++20]](#Templatized-lambdas-C20)
-- [Other interesting parts](#Other-interesting-parts)
+- [Other interesting parts](#other-interesting-parts)
   - [R-Values [C++11]](#R-Values-C11)
   - [Static assertions [C++11]](#Static-assertions-C11)
   - [Allow sizeof to work on members of classes without an explicit object [C++11]](#Allow-sizeof-to-work-on-members-of-classes-without-an-explicit-object-C11)
@@ -67,7 +67,7 @@
   - [Explicit object member functions [C++23]](#Explicit-object-member-functions-c23)
   - [Strongly typed enumerations [C++11]](#strongly-typed-enumerations-C11)
   - [Multidimensional subscript operator [C++23]](#Multidimensional-subscript-operator-C23)
-- [Templates](#Templates)
+- [Templates](#templates)
   - [Extern templates [C++11]](#Extern-templates-C11)
   - [Right angle bracket [C++11]](#Right-angle-bracket-C11)
   - [Template aliases [C++11]](#Template-aliases-C11)
@@ -201,9 +201,11 @@ __STDCPP_STRICT_POINTER_SAFETY__    [C++11]
 - ```nullptr``` is not ```0, 0x0, ((void *) 0), ...```.
 
 **Benefits**:
+
 - Improves code readability and maintainability.
 
 Example:
+
 ```cpp
 void foo(char *);
 void foo(int);
@@ -227,11 +229,13 @@ foo(nullptr);   // foo(char *) is called
 - C++20 allows use constexpr in constructors, destructors, virtual functions and lambdas.
 
 **Benefits**:
+
 - Improves performance by pre-computing values.
 - Enables compile-time checks and optimizations.
 - Facilitates metaprogramming techniques.
 
 Example:
+
 ```cpp
 constexpr float pi = 3.14f;         // constexpr value
 
@@ -286,10 +290,12 @@ struct B : public A {
 - Solves the static initialization order fiasco.
 
 **Benefits**:
+
 - Improves code safety by avoiding undefined behavior.
 - Facilitates static analysis and optimizations.
 
 Example:
+
 ```cpp
 constexpr int valueCE = 3;
 constinit int valueCI = valueCE;
@@ -307,10 +313,12 @@ void foo() {
 - Cannot be executed at runtime.
 
 **Benefits**:
+
 - Improves performance by pre-computing values.
 - Enables compile-time checks and optimizations.
 
 Example:
+
 ```cpp
 consteval int add(int a, int b) {
     return a + b;
@@ -331,6 +339,7 @@ int e3 = add(i,  1);    // Error: The value of i is not known at compile time
 Detects whether the function call occurs within a constant-evaluated context.
 
 Example:
+
 ```cpp
 constexpr double
 power(double b, int x)
@@ -351,6 +360,7 @@ power(double b, int x)
 - 0b or 0B followed by one or more binary digits (0, 1).
 
 Example:
+
 ```cpp
 int             a = 0b0001;
 unsigned int    b = 0B0010;
@@ -362,6 +372,7 @@ unsigned int    b = 0B0010;
 - Useful to make numbers more 'human readable'.
 
 Example:
+
 ```cpp
 int     bin = 0b0000'0011'1110'1000;
 int     oct = 0'17'50;
@@ -401,6 +412,7 @@ p / P           Hexadedimal exponent            0x2.1p0 = (2 + 1/16) * 2^0 = 2.0
 ```
 
 **Hexadecimal float regex:**<br>
+
 ```
 [+-]? 0 [xX] ( [0-9a-f]* . [0-9a-f]+ | [0-9a-f]+ .? ) [pP] [+-]? [0-9]+ [flL]?
 
@@ -424,6 +436,7 @@ _Note: Does not work pretty well on some compilers._
 ### String literals
 
 Example:
+
 ```cpp
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
@@ -452,6 +465,7 @@ std::u32string      str9 = U"str";      // C++11 (UTF-32)
 - Allows for flexibility in escaping nested quotes within the raw string.
 
 Example:
+
 ```cpp
 const char *raw = R"(
 <html>
@@ -468,6 +482,7 @@ Defined in inline namespace ```std::literals::complex_literals``` [C++14]
 A ```std::complex``` literal representing pure imaginary number
 
 Example:
+
 ```cpp
 if          std::complex<float>              5if
 i           std::complex<double>             5i
@@ -491,6 +506,7 @@ d           A std::chrono::day literal representing a day of a month [C++20]
 ```
 
 Example:
+
 ```cpp
 using namespace std::literals::chrono_literals;
 
@@ -502,6 +518,7 @@ auto timeout = 5min + 30s;
 Allows the user to define his own suffixes and define conversion rules.
 
 Rules:
+
 - All the user defined literals must begin always with the underscore '_'.
 - The system libraries must not use underscores to define its own literals.
 - Only the following parameter lists are allowed on literal operators:
@@ -528,6 +545,7 @@ Rules:
 ```
 
 Example:
+
 ```cpp
 constexpr float
 operator "" _deg ( long double deg ) {
@@ -551,12 +569,14 @@ sprite.Rotate(180_deg);
 - Cannot be directly modified or accessed by index.
 
 **Benefits**:
+
 - Improves code readability and conciseness.
 - Can be more efficient than manual element addition.
 - Enables features like uniform initialization.
 - Copying an initializer_list doesn't copy the actual elements, only references them.
 
 Example:
+
 ```cpp
 #include <initializer_list>
 
@@ -577,6 +597,7 @@ void printValues(std::initializer_list<int> values) {
 - Uniform initialization prevents narrowing conversions. The type in braces must be the same of the variable.
 
 Example:
+
 ```cpp
 int     x     { 42 };
 double  y     { 3.14 };
@@ -601,6 +622,7 @@ std::vector<float> vec {1, 2, 3};
 - Prior to C++20, aggregate initialization relied on the order of members in the class or struct definition. However, this could lead to errors if the order changed or if some members were added or removed.
 
 Example:
+
 ```cpp
 struct Point {
     int x;
@@ -780,11 +802,13 @@ switch(auto status = GetStatus(); status) {
 Lambda expressions provide a concise way to create anonymous functions.
 
 **Structure**:
+
 ```cpp
 [captureList](parameters) mutable -> returnType { body }
 ```
 
 **Example**:
+
 ```cpp
 auto lambda = [foo](int a, int b) -> decltype(a + b) { return foo + a + b; };
 
@@ -806,9 +830,11 @@ class __RandomName {
   - **[&foo, bar]**: Capture ```foo``` by reference and ```bar``` by value.
 - **parameters**: is optional.
 - **mutable**: is optional.<br/>By default, the generated operator() is const, so if we want to be able to modify the captured variables we need to add ```mutable``` after parameters.<br/>
+
 ```cpp
 auto lambda = [foo](int a, int b) mutable { return ++foo + a + b; }; // Increment local lambda variable foo on every call
 ```
+
 - **returnType**: is optional and can be deduced.
 - **body**: is the body of the function to execute.
 
@@ -991,7 +1017,7 @@ doCount(const char *name, int count, int &ref) {
     ref = inc;  // inc is local copy
 }
 
-int 
+int
 main() {
     int     a{}, b{};
 
@@ -1009,32 +1035,34 @@ main() {
 
 ## Attributes [C++11]
 
-Provide a unified standard syntax for implementation-defined language extensions. Before this feature, each compiler has its own way to do it: 
- - GNU/Clang: __attribute__((...))
- - Microsoft: __declspec(...)
- - Borland: __property
- - Different compilers: __builtin_XXX
+Provide a unified standard syntax for implementation-defined language extensions. Before this feature, each compiler has its own way to do it:
+
+- GNU/Clang: __attribute__((...))
+- Microsoft: __declspec(...)
+- Borland: __property
+- Different compilers: __builtin_XXX
 
 The new standar way is: ```[[attribute, attribute...]]```.
- 
+
 These are the standard attributes:
 
 ```
-- [[noreturn]]              [C++11]	Indicates that the function does not return.
-- [[carries_dependency]]    [C++11]	Indicates that dependency chain in release-consume std::memory_order propagates in and out of the function.
+- [[noreturn]]              [C++11] Indicates that the function does not return.
+- [[carries_dependency]]    [C++11] Indicates that dependency chain in release-consume std::memory_order propagates in and out of the function.
 - [[deprecated]]            [C++14] Indicates that the use of the name or entity declared with this attribute is allowed, but discouraged for some reason.
-  [[deprecated("reason")]]  [C++14]	
-- [[fallthrough]]           [C++17]	Indicates that the fall through from the previous case label (switch statement) is intentional and should not be diagnosed by a compiler that warns on fall-through.
+  [[deprecated("reason")]]  [C++14]
+- [[fallthrough]]           [C++17] Indicates that the fall through from the previous case label (switch statement) is intentional and should not be diagnosed by a compiler that warns on fall-through.
 - [[nodiscard]]             [C++17] Encourages the compiler to issue a warning if the return value is discarded.
-  [[nodiscard("reason")]]   [C++20]	
-- [[maybe_unused]]          [C++17]	Suppresses compiler warnings on unused entities, if any.
+  [[nodiscard("reason")]]   [C++20]
+- [[maybe_unused]]          [C++17] Suppresses compiler warnings on unused entities, if any.
 - [[likely]]                [C++20]
-- [[unlikely]]              [C++20]	Indicates that the compiler should optimize for the case where a path of execution through a statement is more or less likely than any other path of execution.
-- [[no_unique_address]]     [C++20]	Indicates that a non-static data member need not have an address distinct from all other non-static data members of its class.
-- [[assume(expression)]]    [C++23]	Specifies that the expression will always evaluate to true at a given point.
+- [[unlikely]]              [C++20] Indicates that the compiler should optimize for the case where a path of execution through a statement is more or less likely than any other path of execution.
+- [[no_unique_address]]     [C++20] Indicates that a non-static data member need not have an address distinct from all other non-static data members of its class.
+- [[assume(expression)]]    [C++23] Specifies that the expression will always evaluate to true at a given point.
 ```
 
 Each compiler/library can create its own attributes inside a namespace:
+
 - **Microsoft**: [[msvc::attribute]]
 - **Guidelines Support Library**: [[gls::attribute]]
 - **GNU**: [[gnu::attribute]]
@@ -1196,10 +1224,11 @@ struct C : public B {
 ## Operator spaceship <=> (3 way comparator) [C++20]
 
 The return value could be one of:
- - ```std::strong_ordering```:  f(a) must be equal to f(b).      Only one of (a < b), (a == b) or (a > b) must be true.
- - ```std::weak_ordering```:    f(a) may be different from f(b). Only one of (a < b), (a == b) or (a > b) must be true.
- - ```std::partial_ordering```: f(a) may be different from f(b). (a < b), (a == b) and (a > b) may all be false
- - ```int, ...```
+
+- ```std::strong_ordering```:  f(a) must be equal to f(b).      Only one of (a < b), (a == b) or (a > b) must be true.
+- ```std::weak_ordering```:    f(a) may be different from f(b). Only one of (a < b), (a == b) or (a > b) must be true.
+- ```std::partial_ordering```: f(a) may be different from f(b). (a < b), (a == b) and (a > b) may all be false
+- ```int, ...```
 
 ```cpp
 #include <compare>
@@ -1472,6 +1501,7 @@ auto res = sum(1, 2.61f, 3.42, true);   // int res = 8;
 # Deprecated Features
 
 - **String literal constants** [C++11]
+
 ```cpp
       char *str = "Hello";  // Deprecated
 const char *str = "Hello";  // Ok
@@ -1492,14 +1522,14 @@ Use any of ```static_cast```, ```reinterpret_cast``` or ```const_cast```
 
 - **Some C standar libraries**<br>
 
-  __Empty C headers__
+  **Empty C headers**
 
   - ```<ccomplex> / complex.h>``` (C++11) (deprecated in C++17) (removed in C++20)<br>
     Simply includes the header ```<complex>```
   - ```<ctgmath> / <tgmath.h>``` (C++11) (deprecated in C++17) (removed in C++20)<br>
     Simply includes the headers ```<complex>``` and ```<cmath>``` the overloads equivalent to the contents of the C header tgmath.h are already provided by those headers<br><br>
 
-  __Meaningless C headers__
+  **Meaningless C headers**
 
   - ```<ciso646>``` (removed in C++20)<br>
     Empty header. The macros that appear in iso646.h in C are keywords in C++
