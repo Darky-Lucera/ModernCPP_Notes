@@ -255,6 +255,10 @@ foo(nullptr);   // foo(char *) is called
 - **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
 
 ```cpp
+// Special case. In this case, const is irrelevant. It only adds some semantic value.
+constexpr char       kStrA[] = "Hola";
+constexpr const char kStrB[] = "Hola";
+
 // Remember the address of a variable inside a function is unknown at compile time
 int value = 0;
 
