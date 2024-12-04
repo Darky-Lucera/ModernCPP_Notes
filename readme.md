@@ -216,17 +216,119 @@ foo(nullptr);   // foo(char *) is called
 
 ## constexpr [C++11]
 
-- ```constexpr``` **values** are evaluated only at compile time and cannot be modified.
+- ```constexpr``` **variables** are evaluated at compile time and cannot be modified.
+  - **Native types**: ```constexpr``` implies ```const``` (bool, int, float, uint64_t, ...).
+  - **Pointers**: ```constexpr``` implies ```* const```. NOT ```const *```.
 - ```constexpr``` **functions** can be executed at compile or at execution time.
-- C++11 allows only non-complex computations.
-- Later versions (C++14 and beyond) introduced more freedom, allowing for:
-  - If statements.
-  - Multiple returns.
-  - Loops.
-  - Comma separated expressions.
-  - Exceptions.
-  - Access static members.
-- C++20 allows use constexpr in constructors, destructors, virtual functions and lambdas.
+- **C++11**: Limited to a single `return` expression and cannot contain control structures.
+- **C++14**: Allows the use of conditionals (`if`, `switch`), loops, and multiple statements.
+  - Class types can have mutable members within `constexpr` functions.
+
+    ```cpp
+    // Since C++14
+    class Accumulator {
+    public:
+        constexpr Accumulator() : sum(0) {}
+
+        constexpr void add(int value) {
+            sum += value;
+        }
+
+        constexpr int total() const {
+            return sum;
+        }
+
+    private:
+        int sum;
+    };
+
+    constexpr int computeSum() {
+        Accumulator acc;
+        for (int i = 1; i <= 5; ++i) {
+            acc.add(i);
+        }
+        return acc.total();
+    }
+    ```
+
+- **C++17**: Introduces `constexpr` lambdas.
+- **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
+
+```cpp
+// Remember the address of a variable inside a function is unknown at compile time
+int value = 0;
+
+int
+main() {
+    constexpr int *             constexprPtr            = &value;   // We can NOT modify the pointer, only the value. It is equal to 'constexpr int * const'
+    constexpr const int *       constexprConstPtr       = &value;   // We can NOT modify either the pointer or the value. It is equal to 'constexpr const int * const'
+    constexpr int * const       constexprPtrConst       = &value;   // We can NOT modify the pointer, only the value. The second const is redundant!
+    constexpr const int * const constexprConstPtrConst  = &value;   // We can NOT modify either the pointer or the value. The second const is redundant!
+
+    int *                       ptr                     = &value;   // We can modify the pointer and the value
+    const int *                 constPtr                = &value;   // We can modify the pointer but NOT the value
+    int * const                 ptrConst                = &value;   // We can NOT modify the pointer, only the value
+    const int * const           constPtrConst           = &value;   // We can NOT modify either the pointer or the value
+
+    constexpr int &             constexprRef            = value;
+    constexpr const int &       constexprConstRef       = value;
+    // This is not valid in C++
+    //constexpr int & const       constexprRefConst       = value;
+    //constexpr const int & const constexprConstRefConst  = value;
+
+    int &                       ref                     = value;
+    const int &                 constRef                = value;
+    // This is not valid in C++
+    //int & const                 refConst                = value;
+    //const int & const           constRefConst           = value;
+
+    //---------------------------------
+    // constexpr pointers
+    //---------------------------------
+    *constexprPtr           = 1;
+    //*constexprConstPtr      = 2;      // [WRONG] The value is const
+    *constexprPtrConst      = 3;
+    //*constexprConstPtrConst = 4;      // [WRONG] The value is const
+
+    //++constexprPtr;                   // [WRONG] The pointer is const
+    //++constexprConstPtr;              // [WRONG] The pointer is const
+    //++constexprPtrConst;              // [WRONG] The pointer is const
+    //++constexprConstPtrConst;         // [WRONG] The pointer is const
+
+    //---------------------------------
+    // normal pointers
+    //---------------------------------
+    *ptr                    = 5;
+    //*constPtr               = 6;      // [WRONG] The value is const
+    *ptrConst               = 7;
+    //*constPtrConst          = 8;      // [WRONG] The value is const
+
+    ++ptr;
+    ++constPtr;
+    //++ptrConst;                       // [WRONG] The pointer is const
+    //++constPtrConst;                  // [WRONG] The pointer is const
+
+    //---------------------------------
+    // constexpr references
+    //---------------------------------
+    constexprRef            = 9;
+    //constexprConstRef       = 10;     // [WRONG] The value is const
+
+    ++constexprRef;                     // Valid but don't do this at home.
+    //++constexprConstRef;              // [WRONG] The reference is const
+
+    //---------------------------------
+    // normal references
+    //---------------------------------
+    ref                     = 13;
+    //constRef                = 14;     // [WRONG] The value is const
+
+    ++ref;
+    //++constRef;                       // [WRONG] The reference is const
+
+    return 0;
+}
+```
 
 **Benefits**:
 
