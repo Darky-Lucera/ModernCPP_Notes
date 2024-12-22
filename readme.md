@@ -233,75 +233,6 @@ foo(nullptr);   // Calls foo(std::nullptr_t) if defined, if not calls foo(char *
   - **Built-in types**: `constexpr` implies `const` (`bool`, `int`, `float`, `uint64_t`, ...).
   - **Pointers**: `constexpr` implies that the pointer itself is constant `int * const` but NOT `const int *`.
 
-- `constexpr` **functions** can be executed at compile time if all arguments are constant expressions.
-
-#### Evolution by Standard
-
-- **C++11**: Limited to a single `return` expression and cannot contain loops or branches.
-- **C++14**: Allows conditionals (`if`, `switch`), loops, and multiple statements. Class types in `constexpr` functions can have mutable members.
-- **C++17**: Introduces `constexpr` lambdas.
-- **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
-- **C++20**: Allows `constexpr` dynamic allocations.
-
-
-```cpp
-// C++11 constexpr function (single return only)
-constexpr int add(int a, int b) {
-    return a + b;
-}
-
-// C++14 constexpr function (multiple statements, loops)
-constexpr int factorial(int n) {
-    if (n <= 1) return 1;
-    int result = 1;
-    for (int i = 2; i <= n; ++i) {
-        result *= i;
-    }
-    return result;
-}
-
-// C++17 constexpr lambda
-auto identity = [](int n) constexpr { return n; };
-
-// C++20 constexpr virtual function
-struct A {
-    virtual int foo() const = 0;
-    constexpr virtual ~A() { ... }
-};
-
-struct B : public A {
-    constexpr virtual int foo() const override {
-        return 42;
-    }
-    constexpr virtual ~B() { ... }
-};
-
-// C++20 constexpr Dynamic allocations.
-struct Node {
-    int value;
-    Node* next;
-    constexpr Node(int v, Node* n = nullptr) : value(v), next(n) {}
-};
-
-constexpr Node* build_list(int n) {
-    if (n <= 0) return nullptr;
-    Node* head = new Node(n);
-    Node* current = head;
-    for (int i = n - 1; i > 0; --i) {
-        current->next = new Node(i);
-        current = current->next;
-    }
-    return head;
-}
-
-constexpr Node* my_list = build_list(5); // Constructed at compile time
-```
-
-**Benefits**:
-
-- Enables compile-time computation and checking.
-- Facilitates optimizations and metaprogramming.
-
 **Special cases**:
 
 ```cpp
@@ -383,6 +314,75 @@ main() {
     return 0;
 }
 ```
+
+- `constexpr` **functions** can be executed at compile time if all arguments are constant expressions.
+
+#### Evolution by Standard
+
+- **C++11**: Limited to a single `return` expression and cannot contain loops or branches.
+- **C++14**: Allows conditionals (`if`, `switch`), loops, and multiple statements. Class types in `constexpr` functions can have mutable members.
+- **C++17**: Introduces `constexpr` lambdas.
+- **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
+- **C++20**: Allows `constexpr` dynamic allocations.
+
+
+```cpp
+// C++11 constexpr function (single return only)
+constexpr int add(int a, int b) {
+    return a + b;
+}
+
+// C++14 constexpr function (multiple statements, loops)
+constexpr int factorial(int n) {
+    if (n <= 1) return 1;
+    int result = 1;
+    for (int i = 2; i <= n; ++i) {
+        result *= i;
+    }
+    return result;
+}
+
+// C++17 constexpr lambda
+auto identity = [](int n) constexpr { return n; };
+
+// C++20 constexpr virtual function
+struct A {
+    virtual int foo() const = 0;
+    constexpr virtual ~A() { ... }
+};
+
+struct B : public A {
+    constexpr virtual int foo() const override {
+        return 42;
+    }
+    constexpr virtual ~B() { ... }
+};
+
+// C++20 constexpr Dynamic allocations.
+struct Node {
+    int value;
+    Node* next;
+    constexpr Node(int v, Node* n = nullptr) : value(v), next(n) {}
+};
+
+constexpr Node* build_list(int n) {
+    if (n <= 0) return nullptr;
+    Node* head = new Node(n);
+    Node* current = head;
+    for (int i = n - 1; i > 0; --i) {
+        current->next = new Node(i);
+        current = current->next;
+    }
+    return head;
+}
+
+constexpr Node* my_list = build_list(5); // Constructed at compile time
+```
+
+**Benefits**:
+
+- Enables compile-time computation and checking.
+- Facilitates optimizations and metaprogramming.
 
 ### constinit [C++20]
 
