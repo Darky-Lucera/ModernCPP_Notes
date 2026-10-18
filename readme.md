@@ -184,7 +184,7 @@ __LINE__
 __FILE__
 __DATE__
 __TIME__
-__func__                            Current function name. GCC, Clang, MSVC 2012+, Intel
+__func__                            Current function name. Not a macro: a predefined variable in every function [C++11]
 __FUNCTION__                        Current function name. Non-standard
 __FUNCDNAME__                       Current function name. Non-standard
 __PRETTY_FUNCTION__                 Current function name. Non-standard [GCC]
@@ -200,7 +200,7 @@ __STDC_VERSION__                    [C++11]
 __STDC_ISO_10646__                  [C++11]
 __STDC_MB_MIGHT_NEQ_WC__            [C++11]
 __STDCPP_THREADS__                  [C++11]
-__STDCPP_STRICT_POINTER_SAFETY__    [C++11]
+__STDCPP_STRICT_POINTER_SAFETY__    [C++11, removed in C++23]
 ```
 
 ## Constants
@@ -215,16 +215,21 @@ __STDCPP_STRICT_POINTER_SAFETY__    [C++11]
 
 - Improves code readability and type safety.
 
-**Example**;
+**Example**:
 
 ```cpp
 void foo(char *);
 void foo(int);
-void foo(std::nullptr_t); // Since C++11 we can detect nullptr
+void foo(std::nullptr_t); // Since C++11 we can detect the literal nullptr
 
-foo(NULL);      // Ambiguous: could call either overload
-foo(nullptr);   // Calls foo(std::nullptr_t) if defined, if not calls foo(char *)
+foo(NULL);      // Depends on the compiler: ambiguous (GCC, Clang) or silently calls foo(int) (MSVC)
+foo(nullptr);   // Calls foo(std::nullptr_t) if declared, if not calls foo(char *)
+
+char *ptr = nullptr;
+foo(ptr);       // Calls foo(char *): ptr is a char *, its value does not matter
 ```
+
+**Note**: The overload is chosen at compile time, from the type of the argument, not from its value. `foo(std::nullptr_t)` is only called when you write `nullptr` in the call. A `char *` that is null at runtime goes to `foo(char *)`, so that function must still check for `nullptr`.
 
 ### constexpr [C++11]
 
@@ -271,58 +276,58 @@ main() {
     // constexpr pointers
     //---------------------------------
     *constexprPtr           = 1;
-    //*constexprConstPtr      = 2;      // [WRONG] The value is const
+    //*constexprConstPtr      = 2;      // Error: The value is const
     *constexprPtrConst      = 3;
-    //*constexprConstPtrConst = 4;      // [WRONG] The value is const
+    //*constexprConstPtrConst = 4;      // Error: The value is const
 
-    //++constexprPtr;                   // [WRONG] The pointer is const
-    //++constexprConstPtr;              // [WRONG] The pointer is const
-    //++constexprPtrConst;              // [WRONG] The pointer is const
-    //++constexprConstPtrConst;         // [WRONG] The pointer is const
+    //++constexprPtr;                   // Error: The pointer is const
+    //++constexprConstPtr;              // Error: The pointer is const
+    //++constexprPtrConst;              // Error: The pointer is const
+    //++constexprConstPtrConst;         // Error: The pointer is const
 
     //---------------------------------
     // normal pointers
     //---------------------------------
     *ptr                    = 5;
-    //*constPtr               = 6;      // [WRONG] The value is const
+    //*constPtr               = 6;      // Error: The value is const
     *ptrConst               = 7;
-    //*constPtrConst          = 8;      // [WRONG] The value is const
+    //*constPtrConst          = 8;      // Error: The value is const
 
     ++ptr;
     ++constPtr;
-    //++ptrConst;                       // [WRONG] The pointer is const
-    //++constPtrConst;                  // [WRONG] The pointer is const
+    //++ptrConst;                       // Error: The pointer is const
+    //++constPtrConst;                  // Error: The pointer is const
 
     //---------------------------------
     // constexpr references
     //---------------------------------
     constexprRef            = 9;
-    //constexprConstRef       = 10;     // [WRONG] The value is const
+    //constexprConstRef       = 10;     // Error: The value is const
 
     ++constexprRef;                     // Valid but don't do this at home.
-    //++constexprConstRef;              // [WRONG] The reference is const
+    //++constexprConstRef;              // Error: The reference is const
 
     //---------------------------------
     // normal references
     //---------------------------------
     ref                     = 13;
-    //constRef                = 14;     // [WRONG] The value is const
+    //constRef                = 14;     // Error: The value is const
 
     ++ref;
-    //++constRef;                       // [WRONG] The reference is const
+    //++constRef;                       // Error: The reference is const
 
     return 0;
 }
 ```
 
-- `constexpr` **functions** can be executed at compile time if all arguments are constant expressions.
+- `constexpr` **functions** can be executed at compile time if all arguments are constant expressions. This is only guaranteed when the result is used where a constant is required (for example, to initialize a `constexpr` variable). Otherwise the call may run at runtime.
 
 #### Evolution by Standard
 
-- **C++11**: Limited to a single `return` expression and cannot contain loops or branches.
+- **C++11**: Limited to a single `return` statement. No `if` or loops, but you can use the `?:` operator and recursion.
 - **C++14**: Allows conditionals (`if`, `switch`), loops, and multiple statements. Class types in `constexpr` functions can have mutable members.
 - **C++17**: Introduces `constexpr` lambdas.
-- **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
+- **C++20**: Allows `constexpr` destructors and virtual functions, and `try` / `catch` blocks. A `throw` still cannot run at compile time (this is allowed in C++26).
 - **C++20**: Allows `constexpr` dynamic allocations (`new` / `delete`), if the memory is freed before the evaluation ends.
 
 ```cpp
@@ -384,7 +389,7 @@ constexpr int sum_list(int n) {
 
 static_assert(sum_list(5) == 15);           // Built, used and freed at compile time
 
-//constexpr Node* my_list = build_list(5);  // [WRONG] The memory is never freed
+//constexpr Node* my_list = build_list(5);  // Error: The memory is never freed
 ```
 
 **Note**: Memory allocated at compile time must be freed before the evaluation ends. This is why you can use `std::vector` or `std::string` inside a `constexpr` function, but you cannot store them in a `constexpr` variable.
@@ -411,7 +416,7 @@ static_assert(sum_list(5) == 15);           // Built, used and freed at compile 
 
 ```cpp
 constexpr int ce = 3;
-constinit int ci = ce;         // OK: x is a constexpr
+constinit int ci = ce;         // OK: ce is a constexpr
 //constinit int error = ci;    // Error: ci is not usable in constant expressions
 
 void foo() {
@@ -431,7 +436,7 @@ void foo() {
 - Enables compile-time checks and optimizations.
 - Enforces compile-time computation for functions that must produce constant expressions.
 
-**Example**;
+**Example**:
 
 ```cpp
 consteval int add(int a, int b) {
@@ -460,7 +465,7 @@ int e3 = add(i,  1);    // Error: The value of i is not known at compile time
 
 Detects whether the current evaluation context is a constant expression.
 
-**Example**;
+**Example**:
 
 ```cpp
 constexpr double
@@ -486,7 +491,7 @@ power(double base, uint8_t exp) {
 
 Prefix `0b` or `0B` followed by one or more binary digits (`0` or `1`).
 
-**Example**;
+**Example**:
 
 ```cpp
 int             a = 0b0001;
@@ -499,7 +504,7 @@ The single-quote character (`'`) may be used arbitrarily as a digit separator in
 
 Useful to make numbers more 'human readable'.
 
-**Example**;
+**Example**:
 
 ```cpp
 int     bin = 0b0000'0011'1110'1000;
@@ -532,24 +537,24 @@ uz / UZ         size_t                          123uz / 123UZ       [C++23]
 #### Floating-Point Literals
 
 ```text
-f / F           float                           2f, 2.0f
+f / F           float                           2f, 2F, 2.0f / 2.0F
 l / L           long double                     2.0l / 2.0L
 e / E           Exponent                        2e2 / 2E2 == 2 * 10^2 == 200
-0x / 0X         Hexadecimal float
-p / P           Binary exponent for hex float   0x2.1p0 = (2 + 1/16) * 2^0 = 2.0625
+0x / 0X         Hexadecimal float                                                       [C++17]
+p / P           Binary exponent for hex float   0x2.1p0 = (2 + 1/16) * 2^0 = 2.0625     [C++17]
 ```
 
 **Hexadecimal float regex**:
 
 ```text
-[+-]? 0 [xX] ( [0-9a-fA-F]* . [0-9a-fA-F]+ | [0-9a-fA-F]+ .? ) [pP] [+-]? [0-9]+ [flL]?
+[+-]? 0 [xX] ( [0-9a-fA-F]* \. [0-9a-fA-F]+ | [0-9a-fA-F]+ \.? ) [pP] [+-]? [0-9]+ [fFlL]?
 ```
 
 Examples:
 
 ```cpp
 0x2p1f    = 2 * 2^1 = 4.0f
--0x2.1p0  = (2 + 1/16) * 2^0 = -2.0625
+-0x2.1p0  = -(2 + 1/16) * 2^0 = -2.0625
 0x1.0p10L = 1024.0L
 0x0.8p-1  = 0.25
 ```
@@ -558,7 +563,8 @@ Examples:
 
 ```text
 L               wchar_t                         L'a'
-u8              char8_t  (UTF-8)                u8'a'           Range [0x0, 0x7F]       [C++17]
+u8              char     (UTF-8)                u8'a'           Range [0x0, 0x7F]       [C++17]
+u8              char8_t  (UTF-8)                u8'a'           Range [0x0, 0x7F]       [C++20]
 u               char16_t (UTF-16)               u'a'            Range [0x0, 0xFFFF]     [C++11]
 U               char32_t (UTF-32)               U'a'            Range [0x0, 0xFFFFFFFF] [C++11]
 ```
@@ -567,7 +573,7 @@ U               char32_t (UTF-32)               U'a'            Range [0x0, 0xFF
 
 #### String Literals
 
-**Example**;
+**Example**:
 
 ```cpp
 using namespace std::literals::string_literals;       [C++14]
@@ -595,10 +601,10 @@ std::u32string      str9 = U"str";      // C++11 (UTF-32)
 R"delimiter( raw characters )delimiter"
 ```
 
-- The delimiter can be any sequence of characters (except `"(` or `)"`).
+- The delimiter can have up to 16 characters. It cannot contain spaces, parentheses or backslashes.
 - Useful for embedding strings that contain backslashes, quotes, or multiple lines.
 
-**Example**;
+**Example**:
 
 ```cpp
 const char *html = R"HTML(
@@ -620,7 +626,7 @@ Suffixes:
 - `i`  → `std::complex<double>`
 - `il` → `std::complex<long double>`
 
-**Example**;
+**Example**:
 
 ```cpp
 using namespace std::literals::complex_literals;
@@ -647,7 +653,7 @@ y    // std::chrono::year          (since C++20)
 d    // std::chrono::day           (since C++20)
 ```
 
-**Example**;
+**Example**:
 
 ```cpp
 using namespace std::literals::chrono_literals;
@@ -667,6 +673,7 @@ Allowed parameter lists for literal operator functions:
 // Numeric
 ( unsigned long long int )
 ( long double )
+( const char * )    // Raw: receives the number as written, as a string
 
 // Characters
 ( char )
@@ -676,7 +683,6 @@ Allowed parameter lists for literal operator functions:
 ( char32_t )
 
 // Strings
-( const char * )
 ( const char * ,     size_t )
 ( const wchar_t * ,  size_t )
 ( const char8_t * ,  size_t )      // C++20
@@ -684,16 +690,17 @@ Allowed parameter lists for literal operator functions:
 ( const char32_t * , size_t )
 ```
 
-**Example**;
+**Example**:
 
 ```cpp
+// Write operator""_deg without a space: the form with a space is deprecated in C++23
 constexpr float
-operator "" _deg (long double deg) {
+operator ""_deg (long double deg) {
     return float(deg * 3.141592 / 180.0);
 }
 
 constexpr float
-operator "" _deg (unsigned long long int deg) {
+operator ""_deg (unsigned long long int deg) {
     return float(deg * 3.141592 / 180.0);
 }
 
@@ -716,7 +723,7 @@ sprite.Rotate(180_deg); // Rotate receives radians as parameter
 - Enables uniform initialization syntax.
 - Copying an initializer_list doesn't copy the actual elements, only references them.
 
-**Example**;
+**Example**:
 
 ```cpp
 #include <initializer_list>
@@ -739,7 +746,7 @@ void printValues(std::initializer_list<int> values) {
 - Works for built-in types, aggregates, and user-defined types.
 - Prevents narrowing conversions (the type inside braces must be representable by the target).
 
-**Example**;
+**Example**:
 
 ```cpp
 int     x     { 42 };
@@ -761,7 +768,8 @@ std::vector<float> v {1, 2, 3};
 
 ### Aggregate Initialization Improvements [C++17]
 
-- C++17 relaxes some aggregate rules, allowing default members and inheritance in aggregates.
+- C++14 allows default member initializers in aggregates (`int a = 0;`).
+- C++17 allows aggregates to have public base classes.
 
 **Example**: Class that remains an aggregate despite having base classes (under certain conditions)
 
@@ -774,7 +782,7 @@ struct Derived : Base {
     int b;
 };
 
-Derived d{ {1}, 2 };  // Inicializa Base::a = 1, Derived::b = 2
+Derived d{ {1}, 2 };  // Initializes Base::a = 1, Derived::b = 2
 ```
 
 ### Designated Initializers [C++20]
@@ -782,7 +790,7 @@ Derived d{ {1}, 2 };  // Inicializa Base::a = 1, Derived::b = 2
 - This is a C99 standard feature that was not included in C++.
 - Prior to C++20, aggregate initialization relied on the order of members in the class or struct definition. However, this could lead to errors if the order changed or if some members were added or removed.
 
-**Example**;
+**Example**:
 
 ```cpp
 struct Point {
@@ -807,7 +815,7 @@ Type inference reduces boilerplate by letting the compiler deduce variable or fu
 - Replaces explicit type declarations, especially useful with long or complex types.
 - Improves code readability and reduces verbosity.
 
-**Example**;
+**Example**:
 
 ```cpp
 auto it = std::find(begin(vec), end(vec), 4);
@@ -833,7 +841,7 @@ multiply(auto a, auto b) {
 - Yields the type of an expression without evaluating it.
 - Especially useful to deduce types in template code or to declare variables based on expressions.
 
-**Example**;
+**Example**:
 
 ```cpp
 auto          a = 2.3f;
@@ -852,7 +860,7 @@ if (std::is_same<decltype(c), float>::value)
 - Deduces types while preserving references and const/volatile qualifiers.
 - Useful when you want exactly the type returned by an expression.
 
-**Example**;
+**Example**:
 
 ```cpp
 int             y  = 0;
@@ -867,7 +875,7 @@ decltype(auto) y4 = y2; // y4 is const int&
 - Specifies a function's return type after the parameter list using `->`.
 - Enables return type deduction based on parameters (useful for templates).
 
-**Example**;
+**Example**:
 
 ```cpp
 template<typename A, typename B>
@@ -951,7 +959,7 @@ auto getValue(T t) {
 ### if consteval [C++23]
 
 - Evaluates to true only when the context is a constant expression.
-- Notice that braces are mandatory: `if consteval { } else { }```
+- Notice that braces are mandatory: `if consteval { } else { }`
 
 ```cpp
 // Used by ipow
@@ -1026,12 +1034,12 @@ class __RandomName {
 };
 ```
 
-- **capture-list** (optional):
-  - `[&]`: capture all visible variables by reference.
-  - `[=]`: capture all visible variables by value.
+- **capture-list** (the brackets are required, the content is optional):
+  - `[&]`: capture by reference the variables used in the body.
+  - `[=]`: capture by value the variables used in the body.
   - `[&foo, bar]`: capture `foo` by reference and `bar` by value.
-- **(parameters)** (optional): Lamba parameters.
-- **mutable** (optional): By default, the generated `operator()` is `const`. To modify captured variables, add `mutable` after parameters.
+- **(parameters)** (optional): Lambda parameters.
+- **mutable** (optional): By default, the generated `operator()` is `const`. To modify variables captured by value, add `mutable` after parameters. Variables captured by reference can be modified without it.
 - **return-type** (optional, deduced if not specified).
 - **body**: the function body.
 
@@ -1044,7 +1052,7 @@ auto lambda = [foo = 0](int a, int b) mutable {
 };
 ```
 
-**Note**: Lambda types are unique and can only be stored in an `auto` or a templated type (e.g., `std::function<>`).
+**Note**: Each lambda has its own unique type, with no name. Store it in an `auto` or in a `std::function<>`. A lambda that captures nothing can also be stored in a function pointer.
 
 ### Default Parameters [C++14]
 
@@ -1061,7 +1069,7 @@ auto lambda = [](int a, int b=1) -> int {
 - Lambdas can be generic, accepting any types for parameters.
 
 ```cpp
-auto lambda = [](auto a, auto b=1) {
+auto lambda = [](auto a, auto b) {
     return a + b;
 };
 ```
@@ -1077,7 +1085,7 @@ auto lambda = [sum = 0](auto value) mutable {
 };
 ```
 
-**Note**: I find it especially useful to capture `std::shared_from_this()` / `std::enable_shared_from_this<>`.
+**Note**: I find it especially useful to capture `shared_from_this()` (from `std::enable_shared_from_this<>`): `[self = shared_from_this()] { ... }`.
 
 ### Returning a Lambda from a Function [C++14]
 
@@ -1141,7 +1149,17 @@ static_assert(add(2, 1) == 3);
 
 ```cpp
 //-------------------------------------
-// Example: Variadic sum using lambda
+// Example: Explicit template parameter
+//-------------------------------------
+auto add_same = []<typename T>(T a, T b) {
+    return a + b;
+};
+
+add_same(1, 2);     // Ok
+add_same(1, 2.0);   // Error: T cannot be int and double at the same time
+
+//-------------------------------------
+// Example: Variadic sum using lambda (capture of a parameter pack, also C++20)
 //-------------------------------------
 template<typename... Args>
 int add(Args &&...args) {
@@ -1160,12 +1178,8 @@ auto Pow = [](T base, T exponent) {
     if constexpr (std::is_integral_v<T>) {
         return ipow(base, exponent);    // Optimized for integer types
     }
-    else if constexpr (std::is_same_v<T, float>) {
-        return std::powf(base, exponent);
-    }
     else {
-        // fallback to std::pow
-        return std::pow(base, exponent); // Default (maybe imaginary numbers?)
+        return std::pow(base, exponent); // Has overloads for float, double and long double
     }
 };
 ```
@@ -1189,7 +1203,7 @@ int &&rvalue = a + b; // binds to rvalue (3 + 4 == 7)
 - Pre-C++11 options (`assert`, `#error`) were either too late or too early in compilation.
 
 ```cpp
-static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields")
+static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields");
 
 template<typename Integral>
 Integral foo(Integral x) {
@@ -1215,9 +1229,9 @@ auto size_of_member = sizeof(A::more);    // allowed in C++11 and later
 
 ### Object Alignment Control and Query [C++11]
 
-C++11 allows variable alignment to be queried `alignof` and queried `alignas`.
+C++11 allows variable alignment to be queried with `alignof` and specified with `alignas`.
 
-- `alignof(T)`: Takes the type and returns the alignment requirement (in bytes) of type ``T.
+- `alignof(T)`: Takes the type and returns the alignment requirement (in bytes) of type `T`.
   - For references, it returns the referenced type's alignment.
   - For arrays, it returns the element type's alignment.
 
@@ -1229,9 +1243,9 @@ struct alignas(16) Vec4 {
     float x, y, z, w;
 };
 
-static_assert(alignof(Vec4) == 16);
+static_assert(alignof(Vec4) == 16, "Vec4 must be aligned to 16 bytes");  // C++17 allows omitting the message
 
-alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
+alignas(float) unsigned char matrix4x4[sizeof(float) * 16];
 ```
 
 ### Thread-Local Storage (TLS) [C++11]
@@ -1310,11 +1324,11 @@ These are the standard attributes:
 Each compiler/library can create its own attributes inside a namespace:
 
 - **Microsoft**: [[msvc::attribute]]
-- **Guidelines Support Library**: [[gls::attribute]]
+- **Guidelines Support Library (GSL)**: [[gsl::attribute]]
 - **GNU**: [[gnu::attribute]]
 - **Clang**: [[clang::attribute]]
 
-Since C++17, we can use `[using namespace: atribute, attribute, ...]`.
+Since C++17, we can use `[[using namespace: attribute, attribute, ...]]`.
 
 ## Object-Oriented
 
@@ -1383,16 +1397,16 @@ B b2(123); // calls A(int)
 ### Move Constructors [C++11]
 
 - A move constructor is a special type of constructor that allows the efficient transfer of resources (like memory ownership) from a temporary object to another object.
-- It's invoked automatically when you initialize an object with an rvalue.
+- It's usually invoked when you initialize an object with an rvalue (the compiler may also skip the move completely).
 - Move constructors are typically used to avoid unnecessary copies of objects, improving performance.
 
 ```cpp
 class Cls {
   public:
-    Cls()                 { ptr = new uint8_t; *ptr = 0;          } // Creates and initializes a pointer
-    Cls(const Cls &other) { ptr = new uint8_t; *ptr = *other.ptr; } // Creates a pointer and copies the values of other object's pointer
-    Cls(Cls &&other)      { std::swap(ptr, other.ptr);            } // Steals the other object's pointer because it's temporary and will be destroyed
-    ~Cls()                { if (ptr != nullptr) delete ptr;       } // Destroys the pointer
+    Cls()                     { ptr = new uint8_t; *ptr = 0;                          } // Creates and initializes a pointer
+    Cls(const Cls &other)     { ptr = other.ptr ? new uint8_t(*other.ptr) : nullptr; } // other.ptr is nullptr if other was moved from
+    Cls(Cls &&other) noexcept { std::swap(ptr, other.ptr);                            } // Steals the other object's pointer because it's temporary and will be destroyed
+    ~Cls()                    { if (ptr != nullptr) delete ptr;                       } // Destroys the pointer
 
   protected:
         uint8_t *ptr = nullptr;
@@ -1420,7 +1434,7 @@ Bool    b1 { true };    // Ok
 Bool    b2 = { true };  // Error: constructor is explicit
 Bool    b3 = true;      // Error: constructor is explicit
 
-bool flag1 = static_cast<bool>(b1); // Ook
+bool flag1 = static_cast<bool>(b1); // Ok
 bool flag2 = b1;                    // Error: operator bool is explicit
 
 if (b1) {
@@ -1433,7 +1447,7 @@ if (b1 < 123) {
 }
 
 std::string str = b1;   // Error: operator std::string() is explicit
-std::string str = static_cast<std::string>(b1); // explicit cast is alowed
+std::string str = static_cast<std::string>(b1); // explicit cast is allowed
 ```
 
 ### Explicit Virtual Function Override [C++11]
@@ -1648,7 +1662,7 @@ int main() {
     //--
 
     cls.bar();      // lvalue
-    cCls.bar();     // rvalue
+    cCls.bar();     // const lvalue
 
     Cls().bar();    // rvalue
     getCls().bar(); // const rvalue
@@ -1702,13 +1716,12 @@ auto a = fibonacci_14(fibonacci_14, 5);
 
 // Alternative C++14
 int foo() {
-    // This only works as local lambda.
-    // We cannot use auto here.
+    // We cannot use auto here: the lambda uses the variable it initializes.
     static std::function<int(int)> fibonacci_14_alt = [&](int n) -> int {
         return (n < 2) ? n : fibonacci_14_alt(n - 1) + fibonacci_14_alt(n - 2);
     };
 
-    return fibonacci_14(fibonacci_14, 5);
+    return fibonacci_14_alt(5);
 }
 
 //--
@@ -1866,7 +1879,7 @@ auto res = sum(1, 2.61f, 3.42, true);   // int res = 8;
 ```cpp
 template<typename... Args>
 auto sumAll(Args... args) {
-    return (args + ...); // equivalent to a + b + c + ...
+    return (args + ...); // equivalent to a + (b + (c + ...))
 }
 
 template<typename T, typename... Rest>
@@ -1877,12 +1890,21 @@ void print_all(const T& first, const Rest&... rest) {
 }
 ```
 
+**Note**: The position of `...` sets the order of the operations:
+
+```cpp
+(args + ...)    // Right fold: a + (b + (c + d))
+(... + args)    // Left fold:  ((a + b) + c) + d
+```
+
+With `int` the result is the same, but the order matters with strings, with `float` (rounding) or when you mix types. For example, `sumAll(std::string("a"), "b", "c")` does not compile with a right fold, because it first computes `"b" + "c"` (two `const char*`). With a left fold it works.
+
 ## Deprecated Features
 
 - **String literal constants** [Deprecated in C++98, removed in C++11]
 
 ```cpp
-//        char *str = "Hello";  // [WRONG] Since C++11: non-const pointer to a string literal
+//        char *str = "Hello";  // Error since C++11: non-const pointer to a string literal
   const char *str = "Hello";  // Pointer to const char
 ```
 
@@ -1904,14 +1926,14 @@ void print_all(const T& first, const Rest&... rest) {
 - **register keyword** [Deprecated in C++11, removed in C++17]
 
   ```cpp
-  // register int x = 0;  // [WRONG] Since C++17. The compiler decides where to store variables.
+  // register int x = 0;  // Error since C++17: the compiler decides where to store variables.
   ```
 
 - **++ bool operator** [Deprecated in C++98, removed in C++17]
 
   ```cpp
   // bool b = false;
-  // ++b;     // [WRONG] Since C++17. It did not toggle b: it always set it to true.
+  // ++b;     // Error since C++17: it did not toggle b, it always set it to true.
   b = !b;     // To toggle
   ```
 
