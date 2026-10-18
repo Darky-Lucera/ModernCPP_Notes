@@ -6,7 +6,7 @@
   - [constexpr [C++11]](#constexpr-c11)
   - [constinit [C++20]](#constinit-c20)
   - [consteval [C++20]](#consteval-c20)
-  - [Comparison of `constexpr` vs. `consteval` vs. `constinit`](#Comparison-of-constexpr-vs-consteval-vs-constinit)
+  - [Comparison of `constexpr` vs. `consteval` vs. `constinit`](#comparison-of-constexpr-vs-consteval-vs-constinit)
   - [std::is_constant_evaluated [C++20]](#stdis_constant_evaluated-c20)
 - [Literals](#literals)
   - [Binary Literals [C++14]](#binary-literals-c14)
@@ -17,7 +17,7 @@
     - [Character Literals](#character-literals)
     - [String Literals](#string-literals)
     - [Raw String Literals](#raw-string-literals)
-    - [Complex Number Literals](#complex-number-literals)
+    - [Complex Number Literals](#complex-number-literals-c14)
     - [Chrono Literals](#chrono-literals-c14-c20)
   - [User-Defined Literals [C++11]](#user-defined-literals-c11)
 - [Initialization](#initialization)
@@ -63,7 +63,7 @@
   - [Explicit Conversion Operators [C++11]](#explicit-conversion-operators-c11)
   - [Explicit virtual Function Override [C++11]](#explicit-virtual-function-override-c11)
   - [final [C++11]](#final-c11)
-  - [Operator <=> (Three-Way Comparator) [C++20]](#operator-spaceship-three-way-comparator-c20)
+  - [Operator <=> (Three-Way Comparator) [C++20]](#operator--three-way-comparator-c20)
   - [Defaulted Special Member Functions [C++11]](#defaulted-special-member-functions-c11)
   - [Deleted Special Member Functions [C++11]](#deleted-special-member-functions-c11)
   - [Ref-Qualifiers [C++11]](#ref-qualifiers-c11)
@@ -114,7 +114,7 @@ Since the additions in this section are very few, most directives are grouped he
 #define LOG(msg, ...) printf("[" __FILE__ ":%s:%d] " msg, __func__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 ```
 
-**Operators**
+**Operators**:
 
 - Operator Stringification `#`: Converts a token to a string.
 - Operator Token-Pasting  `##`: Concatenates two tokens.
@@ -177,7 +177,7 @@ Not all compilers define the same macros, so their availability may vary.
 [List of some of non-standard predefined macros](https://sourceforge.net/p/predef/wiki/Home/)
 [C++ Macros](https://en.cppreference.com/w/cpp/symbol_index/macro)
 
-```
+```text
 __cplusplus
 __STDC_HOSTED__                     [C++11]
 __LINE__
@@ -324,7 +324,6 @@ main() {
 - **C++17**: Introduces `constexpr` lambdas.
 - **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
 - **C++20**: Allows `constexpr` dynamic allocations.
-
 
 ```cpp
 // C++11 constexpr function (single return only)
@@ -504,7 +503,7 @@ double  dbl = 0.12'34'56'78;
 
 #### Integer Literals
 
-```
+```text
 0b / 0B         Binary                          0b1001 / 0B1001     [C++14]
 0               Octal                           0123
 0x / 0X         Hexadecimal                     0x123 / 0X123
@@ -521,7 +520,7 @@ uz / UZ         size_t                          123uz / 123UZ       [C++23]
 
 #### Floating-Point Literals
 
-```
+```text
 f / F           float                           2f, 2.0f
 l / L           long double                     2.0l / 2.0L
 e / E           Exponent                        2e2 / 2E2 == 2 * 10^2 == 200
@@ -531,7 +530,7 @@ p / P           Binary exponent for hex float   0x2.1p0 = (2 + 1/16) * 2^0 = 2.0
 
 **Hexadecimal float regex**:
 
-```
+```text
 [+-]? 0 [xX] ( [0-9a-fA-F]* . [0-9a-fA-F]+ | [0-9a-fA-F]+ .? ) [pP] [+-]? [0-9]+ [flL]?
 ```
 
@@ -546,7 +545,7 @@ Examples:
 
 #### Character Literals
 
-```
+```text
 L               wchar_t                         L'a'
 u8              char8_t  (UTF-8)                u8'a'           Range [0x0, 0x7F]       [C++17]
 u               char16_t (UTF-16)               u'a'            Range [0x0, 0xFFFF]     [C++11]
@@ -581,7 +580,7 @@ std::u32string      str9 = U"str";      // C++11 (UTF-32)
 
 #### Raw String Literals
 
-```
+```text
 R"delimiter( raw characters )delimiter"
 ```
 
@@ -625,7 +624,7 @@ Defined in the inline namespace `std::literals::chrono_literals`. [C++14]
 
 Suffixes:
 
-```
+```text
 h    // std::chrono::hours
 min  // std::chrono::minutes
 s    // std::chrono::seconds
@@ -1227,7 +1226,8 @@ alignas(float) unsigned char matrix4x4[sizeof(float) * 16]
 
 ### Thread-Local Storage (TLS) [C++11]
 
-Allows each thread to have its own separate instance of a variable.<br/>
+Allows each thread to have its own separate instance of a variable.
+
 It also works for **static** variables defined inside a function. Each thread will have its own instance of the **per thread global** variable.
 
 - **Lifetime**: The lifetime of a TLS variable begins when it is initialized and ends when the thread terminates.
@@ -1273,16 +1273,16 @@ main() {
 
 Provide a unified standard syntax for implementation-defined language extensions. Before this feature, each compiler has its own way to do it:
 
-- GNU/Clang: __attribute__((...))
-- Microsoft: __declspec(...)
-- Borland: __property
-- Different compilers: __builtin_XXX
+- GNU/Clang: `__attribute__((...))`
+- Microsoft: `__declspec(...)`
+- Borland: `__property`
+- Different compilers: `__builtin_XXX`
 
 The new standard way is: `[[attribute, attribute...]]`.
 
 These are the standard attributes:
 
-```
+```text
 - [[noreturn]]              [C++11] Indicates that the function does not return.
 - [[carries_dependency]]    [C++11] Indicates that dependency chain in release-consume std::memory_order propagates in and out of the function.
 - [[deprecated]]            [C++14] Indicates that the use of the name or entity declared with this attribute is allowed, but discouraged for some reason.
@@ -1884,24 +1884,32 @@ Use any of `static_cast<>()`, `reinterpret_cast<>()` or `const_cast<>()`
 
   **Empty C headers**
 
-  - `<ccomplex>` / `<complex.h>` [C++11: deprecated in C++17; removed in C++20]<br/>
+  - `<ccomplex>` / `<complex.h>` [C++11: deprecated in C++17; removed in C++20]
+
     Include the header `<complex>`
-  - `<ctgmath>` / `<tgmath.h>` [C++11: deprecated in C++17; removed in C++20]<br/>
+  - `<ctgmath>` / `<tgmath.h>` [C++11: deprecated in C++17; removed in C++20]
+
     Include the headers `<complex>` and `<cmath>` the overloads equivalent to the contents of the C header tgmath.h are already provided by those headers
 
   **Meaningless C headers**
 
-  - `<ciso646>` [Removed in C++20]<br/>
+  - `<ciso646>` [Removed in C++20]
+
     Empty header. The macros that appear in iso646.h in C are keywords in C++
-  - `<cstdalign>` [C++11: deprecated in C++17; removed in C++20]<br/>
+  - `<cstdalign>` [C++11: deprecated in C++17; removed in C++20]
+
     Defines one compatibility macro constant
-  - `<cstdbool>` [C++11: deprecated in C++17; removed in C++20]<br/>
+  - `<cstdbool>` [C++11: deprecated in C++17; removed in C++20]
+
     Defines one compatibility macro constant
-  - `<iso646.h>`<br/>
+  - `<iso646.h>`
+
     Has no effect
-  - `<stdalign.h>` [C++11]<br/>
+  - `<stdalign.h>` [C++11]
+
     Defines one compatibility macro constant
-  - `<stdbool.h>` [C++11]<br/>
+  - `<stdbool.h>` [C++11]
+
     Defines one compatibility macro constant
 
 ---
