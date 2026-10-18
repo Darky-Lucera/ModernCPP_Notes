@@ -323,7 +323,7 @@ main() {
 - **C++14**: Allows conditionals (`if`, `switch`), loops, and multiple statements. Class types in `constexpr` functions can have mutable members.
 - **C++17**: Introduces `constexpr` lambdas.
 - **C++20**: Allows `constexpr` destructors and virtual functions, and the use of exceptions in `constexpr` contexts.
-- **C++20**: Allows `constexpr` dynamic allocations.
+- **C++20**: Allows `constexpr` dynamic allocations (`new` / `delete`), if the memory is freed before the evaluation ends.
 
 ```cpp
 // C++11 constexpr function (single return only)
@@ -365,18 +365,29 @@ struct Node {
 };
 
 constexpr Node* build_list(int n) {
-    if (n <= 0) return nullptr;
-    Node* head = new Node(n);
-    Node* current = head;
-    for (int i = n - 1; i > 0; --i) {
-        current->next = new Node(i);
-        current = current->next;
-    }
+    Node* head = nullptr;
+    for (int i = 1; i <= n; ++i)
+        head = new Node(i, head);
     return head;
 }
 
-constexpr Node* my_list = build_list(5); // Constructed at compile time
+constexpr int sum_list(int n) {
+    int total = 0;
+    for (Node* p = build_list(n); p != nullptr; ) {
+        total += p->value;
+        Node* next = p->next;
+        delete p;
+        p = next;
+    }
+    return total;
+}
+
+static_assert(sum_list(5) == 15);           // Built, used and freed at compile time
+
+//constexpr Node* my_list = build_list(5);  // [WRONG] The memory is never freed
 ```
+
+**Note**: Memory allocated at compile time must be freed before the evaluation ends. This is why you can use `std::vector` or `std::string` inside a `constexpr` function, but you cannot store them in a `constexpr` variable.
 
 **Benefits**:
 
@@ -453,18 +464,18 @@ Detects whether the current evaluation context is a constant expression.
 
 ```cpp
 constexpr double
-power(double b, int x) {
+power(double base, uint8_t exp) {
     if (std::is_constant_evaluated()) {
         // Compile-time path
         double result = 1;
-        for (int i = 0; i < x; ++i) {
-            result *= b;
+        for (uint8_t i = 0; i < exp; ++i) {
+            result *= base;
         }
         return result;
     }
     else {
         // Runtime path
-        return std::pow(b, double(x));
+        return std::pow(base, double(exp));
     }
 }
 ```
@@ -922,12 +933,10 @@ if(auto it = std::find(begin(vec), end(vec), 4); it != end(vec)) {
 
 ### if constexpr [C++17]
 
-- Evaluates the condition at compile time if all conditions and branches are constexpr.
-- Unused branches are not compiled.
-- Used for constant expressions within templates or compile-time calculations.
-- Suitable for conditions based on known values at compile time.
-- Can be used for template specialization based on constant checks.
-- Limited by the constexpr restrictions.
+- The condition must be known at compile time. The branches can contain normal runtime code.
+- Inside a template, the branch that is not taken is not instantiated, so it can contain code that is not valid for that `T`.
+- Outside a template, both branches must be valid code.
+- It can often replace template specialization, tag dispatch or SFINAE.
 
 ```cpp
 template<typename T>
@@ -947,14 +956,9 @@ auto getValue(T t) {
 ```cpp
 // Used by ipow
 consteval uint64_t ipow_ct(uint64_t base, uint8_t exp) {
-    if (base == 0)
-        return 0;
-
     uint64_t result = 1;
-    while (exp) {
-        if (exp & 1) result *= base;
-        exp >>= 1;
-        base *= base;
+    for (uint8_t i = 0; i < exp; ++i) {
+        result *= base;
     }
     return result;
 }
@@ -966,11 +970,11 @@ constexpr uint64_t ipow(uint64_t base, uint8_t exp) {
     }
 
     // use runtime evaluation
-    return std::pow(base, exp);
+    return std::pow(base, exp);     // double: exact only up to 2^53
 }
 ```
 
-**Note**: In C++20, you can use [std::is_constant_evaluated()](https://en.cppreference.com/w/cpp/types/is_constant_evaluated) instead of `if consteval` to differentiate compile-time versus runtime.
+**Note**: In C++20 you can use [std::is_constant_evaluated()](https://en.cppreference.com/w/cpp/types/is_constant_evaluated) for the same purpose (see `power` above). But inside `if (std::is_constant_evaluated())` you cannot call a `consteval` function like `ipow_ct`. This is the main reason why `if consteval` was added in C++23.
 
 ### switch with Initializer [C++17]
 
@@ -1077,9 +1081,15 @@ auto lambda = [sum = 0](auto value) mutable {
 
 ### Returning a Lambda from a Function [C++14]
 
-Since the lambda type must be auto, in C++11 we cannot return a lambda from a function. This is fixed in C++14 as functions are allowed to return auto following the deduction guidelines.
+The lambda type has no name, so in C++11 a function cannot return it directly. You have to wrap it in a `std::function`, which has an extra cost. A lambda that captures nothing can also be returned as a function pointer. C++14 allows `auto` as the return type, so the lambda can be returned directly.
 
 ```cpp
+// C++11
+std::function<int(int)> make_adder_11(int x) {
+    return [x](int y) { return x + y; };
+}
+
+// C++14
 auto make_adder(int x) {
     return [x](int y) { return x + y; };
 }
@@ -1483,10 +1493,8 @@ The return value could be one of:
 - `int` or other type.
 
 ```cpp
-#include <compare>
-
 struct Point {
-    float x, y;
+    int x, y;
 
     constexpr auto operator <=>(const Point &rhs) const {
         if(x < rhs.x) return -1;
@@ -1494,29 +1502,42 @@ struct Point {
         if(y < rhs.y) return -1;
         if(y > rhs.y) return  1;
         return 0;
-    };
-
-    // Alternative:
-    constexpr auto operator<=>(const Point &rhs) const {
-        if (x < rhs.x) return std::weak_ordering::less;
-        if (x > rhs.x) return std::weak_ordering::greater;
-        if (y < rhs.y) return std::weak_ordering::less;
-        if (y > rhs.y) return std::weak_ordering::greater;
-        return std::weak_ordering::equivalent;
     }
 };
 ```
 
-- Alternatively, you can write:
+- Alternative using the comparison categories:
 
 ```cpp
+#include <compare>
+
 struct Point {
-    float x, y;
-    auto operator<=>(const Point&) const = default; // compiler-generated
+    int x, y;
+
+    constexpr auto operator <=>(const Point &rhs) const {
+        if (x < rhs.x) return std::strong_ordering::less;
+        if (x > rhs.x) return std::strong_ordering::greater;
+        if (y < rhs.y) return std::strong_ordering::less;
+        if (y > rhs.y) return std::strong_ordering::greater;
+        return std::strong_ordering::equal;
+    }
 };
 ```
 
-**Note**: The default version ususallly generates better and faster code.
+**Note**: A hand-written `<=>` does **not** generate `==`. Add `bool operator ==(const Point &) const = default;` if you need it.
+
+- Alternatively, you can write:
+
+```cpp
+#include <compare>
+
+struct Point {
+    int x, y;
+    auto operator <=>(const Point &) const = default;   // Compares x, then y. Also generates ==
+};
+```
+
+**Note**: With `float` members, the defaulted `<=>` returns `std::partial_ordering`, because NaN cannot be ordered.
 
 ### Defaulted Special Member Functions [C++11]
 
@@ -1535,10 +1556,10 @@ struct A {
     auto operator <=>(const A &rhs) const = default; // C++20
     bool operator == (const A &rhs) const = default; // C++20
     bool operator != (const A &rhs) const = default; // C++20
-    bool operator <  (const A &rhs) const = default; // C++20: default is delete
-    bool operator <= (const A &rhs) const = default; // C++20: default is delete
-    bool operator >  (const A &rhs) const = default; // C++20: default is delete
-    bool operator >= (const A &rhs) const = default; // C++20: default is delete
+    bool operator <  (const A &rhs) const = default; // C++20: uses <=>
+    bool operator <= (const A &rhs) const = default; // C++20: uses <=>
+    bool operator >  (const A &rhs) const = default; // C++20: uses <=>
+    bool operator >= (const A &rhs) const = default; // C++20: uses <=>
 };
 ```
 
@@ -1555,11 +1576,16 @@ struct A {
 
     A & operator = (const A &)  = delete;
     A & operator = (A &&)       = delete;
+};
 
-    // Won't need anymore this old idiom
-    A & operator = (const A &); // Not implemented anywere (get a compiler error if someone tries to use it)
+// Before C++11: declare it private and never define it
+class B {
+  private:
+    B & operator = (const B &);
 };
 ```
+
+**Note**: With the old idiom, using the function from outside the class gives a compile error, because it is private. From inside the class or from a friend, it compiles and fails only at link time. With `= delete`, the error is always at compile time.
 
 ### Ref-Qualifiers [C++11]
 
@@ -1634,19 +1660,34 @@ int main() {
 Since C++23 we can 'deduce this' using a template to simplify the code:
 
 ```cpp
-struct Cls {
-    // A lot of boilerplate
-    std::string &       getName(this Cls &self)        { return mName; }                // C++23
-    const std::string & getName(this const Cls &self)  { return mName; }                // C++23
-    std::string &&      getName(this Cls &&self)       { return std::move(mName); }     // C++23
+// A lot of boilerplate
+struct Cls11 {
+    std::string &       getName() &                    { return mName; }                               // C++11
+    const std::string & getName() const &              { return mName; }                               // C++11
+    std::string &&      getName() &&                   { return std::move(mName); }                    // C++11
 
-    // Better using 'deducing this'
+    std::string mName;
+};
+
+// A lot of boilerplate
+struct Cls23 {
+    std::string &       getName(this Cls23 &self)       { return self.mName; }                         // C++23
+    const std::string & getName(this const Cls23 &self) { return self.mName; }                         // C++23
+    std::string &&      getName(this Cls23 &&self)      { return std::move(self.mName); }              // C++23
+
+    std::string mName;
+};
+
+// Better using 'deducing this'
+struct Cls {
     template <typename Self>
-    auto && getName(this Self &&self)                   { return std::forward(mName); } // C++23
+    auto &&             getName(this Self &&self)       { return std::forward_like<Self>(self.mName); } // C++23
 
     std::string mName;
 };
 ```
+
+**Note**: Functions with an explicit `this` parameter have no implicit `this`, so members must be accessed through `self`. `std::forward_like<Self>(x)` [C++23] returns `x` with the same `const` and lvalue/rvalue category as `self`.
 
 Another nice use of 'deduce this' is making recursive lambdas:
 
@@ -1783,8 +1824,8 @@ using IntPair = Pair<int, U>;
 - Enables functions or classes to accept an arbitrary number of template parameters or function arguments.
 
 ```cpp
-template<typename... Values>                class tuple;    // takes zero or more arguments
-template<typename Head, typename... Tail>   class tuple;    // takes one  or more arguments
+template<typename... Values>                class tuple;            // takes zero or more arguments
+template<typename Head, typename... Tail>   class non_empty_tuple;  // takes one  or more arguments
 
 //-------------------------------------
 // Example: Variadic function 'print'
@@ -1838,78 +1879,78 @@ void print_all(const T& first, const Rest&... rest) {
 
 ## Deprecated Features
 
-- **String literal constants** [C++11]
+- **String literal constants** [Deprecated in C++98, removed in C++11]
 
 ```cpp
-          char *str = "Hello";  // Deprecated: mutable pointer to string literal
-  const char *str = "Hello";  // Recommended: pointer to const char
+//        char *str = "Hello";  // [WRONG] Since C++11: non-const pointer to a string literal
+  const char *str = "Hello";  // Pointer to const char
 ```
 
-- **Unexpected handler** [C++11]
+- **Unexpected handler** [Deprecated in C++11, removed in C++17]
 
-`std::unexpected_handler`, `std::set_unexpected()`, `std::get_unexpected()` and other related features are deprecated
+`std::unexpected()`, `std::unexpected_handler`, `std::set_unexpected()` and `std::get_unexpected()` were removed together with dynamic exception specifications (`throw(X)`). Use `noexcept` for functions that must not throw.
 
-- **std::auto_ptr** [C++11] (removed in C++17)
+**Note**: C++23 reuses the name `std::unexpected` for the error type of `std::expected`. It is not related to the old function.
+
+- **std::auto_ptr** [Deprecated in C++11, removed in C++17]
 
   ```cpp
   // Deprecated in C++11
   std::auto_ptr<int> p(new int(5));
   // Prefer std::unique_ptr or std::shared_ptr
-  std::unique_ptr<int> p2 = std::make_unique<int>(5);
+  std::unique_ptr<int> p2 = std::make_unique<int>(5);   // make_unique is C++14
   ```
 
-- **register keyword** [C++11]
+- **register keyword** [Deprecated in C++11, removed in C++17]
 
   ```cpp
-  // register int x = 0;  // Deprecated. Compiler decides storage automatically.
+  // register int x = 0;  // [WRONG] Since C++17. The compiler decides where to store variables.
   ```
 
-- **++ bool operator** [C++11]
+- **++ bool operator** [Deprecated in C++98, removed in C++17]
 
   ```cpp
-  // bool b = true;
-  // ++b; // Deprecated: increments boolean (conceptually toggles).
+  // bool b = false;
+  // ++b;     // [WRONG] Since C++17. It did not toggle b: it always set it to true.
+  b = !b;     // To toggle
   ```
 
-- **C-style casts** [C++11]
+- **C-style casts** [Not deprecated, but discouraged]
 
-Use any of `static_cast<>()`, `reinterpret_cast<>()` or `const_cast<>()`
+Use the C++ cast that matches the conversion: `static_cast<>()`, `const_cast<>()`, `reinterpret_cast<>()` or `dynamic_cast<>()`.
 
   ```cpp
   // int x = (int)3.14; // Old style: C-style cast
   int y = static_cast<int>(3.14); // Prefer C++-style cast
   ```
 
-- **Some C standard headers** (deprecated or removed)
+- **Some C standard headers**
 
-  **Empty C headers**
+  **`<c...>` headers removed in C++20**
 
-  - `<ccomplex>` / `<complex.h>` [C++11: deprecated in C++17; removed in C++20]
+  - `<ccomplex>` [Deprecated in C++17, removed in C++20]
 
     Include the header `<complex>`
-  - `<ctgmath>` / `<tgmath.h>` [C++11: deprecated in C++17; removed in C++20]
+  - `<ctgmath>` [Deprecated in C++17, removed in C++20]
 
-    Include the headers `<complex>` and `<cmath>` the overloads equivalent to the contents of the C header tgmath.h are already provided by those headers
-
-  **Meaningless C headers**
-
+    Include the headers `<complex>` and `<cmath>`. They already provide the overloads that `tgmath.h` provides in C.
   - `<ciso646>` [Removed in C++20]
 
-    Empty header. The macros that appear in iso646.h in C are keywords in C++
-  - `<cstdalign>` [C++11: deprecated in C++17; removed in C++20]
+    Empty header. The macros that `iso646.h` defines in C (`and`, `or`, `not`, ...) are keywords in C++.
+  - `<cstdalign>` [Deprecated in C++17, removed in C++20]
 
     Defines one compatibility macro constant
-  - `<cstdbool>` [C++11: deprecated in C++17; removed in C++20]
+  - `<cstdbool>` [Deprecated in C++17, removed in C++20]
 
     Defines one compatibility macro constant
-  - `<iso646.h>`
 
-    Has no effect
-  - `<stdalign.h>` [C++11]
+  **`.h` headers still available for C compatibility**
 
-    Defines one compatibility macro constant
-  - `<stdbool.h>` [C++11]
+  In C++ code, prefer the C++ headers.
 
-    Defines one compatibility macro constant
+  - `<complex.h>`: includes `<complex>`
+  - `<tgmath.h>`: includes `<complex>` and `<cmath>`
+  - `<iso646.h>`: has no effect
+  - `<stdalign.h>`, `<stdbool.h>`: only define compatibility macros
 
 ---
