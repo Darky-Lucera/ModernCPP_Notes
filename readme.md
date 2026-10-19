@@ -1,5 +1,7 @@
 # Modern C++
 
+This document describes the C++ standard. Notes like `[Also available since C23]` describe the C standard. Lines marked **C compiler support** give the first compiler version that accepts the feature in C23 mode (`-std=c2x` for GCC and Clang, `/std:clatest` for MSVC), tested on Compiler Explorer. MSVC versions are Visual Studio versions. "or older" means that the oldest version tested (GCC 9, Clang 9, MSVC 16.8) already accepts it. "as standard C23" is the first version that also accepts it with `-pedantic-errors`.
+
 - [Preprocessor Directives](#preprocessor-directives)
 - [Constants](#constants)
   - [nullptr_t and nullptr [C++11]](#nullptr_t-and-nullptr-c11)
@@ -49,11 +51,15 @@
   - [Templated Lambdas [C++20]](#templated-lambdas-c20)
 - [Other Interesting Parts](#other-interesting-parts)
   - [Rvalue References [C++11]](#rvalue-references-c11)
+  - [std::move and std::forward [C++11]](#stdmove-and-stdforward-c11)
+  - [noexcept [C++11]](#noexcept-c11)
+  - [Guaranteed Copy Elision [C++17]](#guaranteed-copy-elision-c17)
   - [Static Assertions [C++11]](#static-assertions-c11)
   - [sizeof on Class Members [C++11]](#sizeof-on-class-members-c11)
   - [Object Alignment Control and Query [C++11]](#object-alignment-control-and-query-c11)
   - [Thread-Local Storage (TLS) [C++11]](#thread-local-storage-tls-c11)
   - [Attributes [C++11]](#attributes-c11)
+  - [Nested Namespace Definitions [C++17]](#nested-namespace-definitions-c17)
 - [Object-Oriented](#object-oriented)
   - [In-Class Member Initializers [C++11]](#in-class-member-initializers-c11)
   - [Inline Static Member Initialization [C++17]](#inline-static-member-initialization-c17)
@@ -69,11 +75,13 @@
   - [Ref-Qualifiers [C++11]](#ref-qualifiers-c11)
   - [Explicit Object Member Functions [C++23]](#explicit-object-member-functions-c23)
   - [Strongly Typed Enumerations [C++11]](#strongly-typed-enumerations-c11)
+  - [using enum [C++20]](#using-enum-c20)
   - [Multidimensional Subscript Operator [C++23]](#multidimensional-subscript-operator-c23)
 - [Templates](#templates)
   - [Extern Templates [C++11]](#extern-templates-c11)
   - [Right-Angle Brackets [C++11]](#right-angle-brackets-c11)
   - [Template Argument Deduction for Class Templates [C++17]](#template-argument-deduction-for-class-templates-c17)
+  - [auto Non-Type Template Parameters [C++17]](#auto-non-type-template-parameters-c17)
   - [Template Aliases [C++11]](#template-aliases-c11)
   - [Variadic Templates [C++11]](#variadic-templates-c11)
   - [Fold Expressions [C++17]](#fold-expressions-c17)
@@ -82,6 +90,12 @@
 ## Preprocessor Directives
 
 Since the additions in this section are very few, most directives are grouped here.
+
+> **C compiler support**:
+>
+> - `#elifdef` and `#elifndef`: GCC 12, Clang 13, MSVC 17.10.
+> - `__has_include`: GCC 9 or older, Clang 9 or older, MSVC 16.8 or older.
+> - `__VA_OPT__`: GCC 9 or older (as standard C23: 13), Clang 12 (as standard C23: 19), MSVC 17.10.
 
 [**Conditional Compilation**](https://en.cppreference.com/w/cpp/preprocessor/conditional):
 
@@ -93,7 +107,7 @@ Since the additions in this section are very few, most directives are grouped he
 #else
 #endif
 
-// New in C++23
+// New in C++23 [Also available since C23]
 #elifdef    id     // equivalent to: #elif defined(id)
 #elifndef   id     // equivalent to: #elif !defined(id)
 ```
@@ -107,8 +121,8 @@ Since the additions in this section are very few, most directives are grouped he
 #define id(...)         [expressions] // [C++11] __VA_OPT__() and __VA_ARGS__ can manage the ellipsis
 #undef  id
 
-// __VA_ARGS__ is not always available before C++11.
-// __VA_OPT__ is available since C++20.
+// __VA_ARGS__ was not always available before C++11. [Also available since C99]
+// __VA_OPT__ is available since C++20. [Also available since C23]
 
 // Example using __VA_ARGS__ and __VA_OPT__ (C++20)
 #define LOG(msg, ...) printf("[" __FILE__ ":%s:%d] " msg, __func__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
@@ -135,7 +149,7 @@ printf("%s = %d\n", kStringify(result), result); // result = 15
 ```cpp
 #include <header>             // global header
 #include "header"             // local header
-#if __has_include(<header>)   // global header check [C++17]
+#if __has_include(<header>)   // global header check [C++17] [Also available since C23]
   ...
 #elif __has_include("header") // local header check [C++17]
   ...
@@ -151,15 +165,17 @@ printf("%s = %d\n", kStringify(result), result); // result = 15
 [**Diagnostic Directives**](https://en.cppreference.com/w/cpp/preprocessor/error):
 
 ```cpp
-#warning    "message"   //                      [C++23]
+#warning    "message"   //                      [C++23] [Also available since C23]
 #error      "message"   //                      [C++98]
 ```
+
+> **C compiler support**: GCC and Clang always accepted it as an extension (as standard C23: GCC 13, Clang 15). MSVC 18.0.
 
 [**Implementation-Defined Behavior Control**](https://en.cppreference.com/w/cpp/preprocessor/impl):
 
 ```cpp
 #pragma name                // Usually 'name' is compiler-specific
-_Pragma(string)             // Allows using pragma inside macros [C++11]
+_Pragma(string)             // Allows using pragma inside macros [C++11] [Also available since C99]
 
 #pragma once
 
@@ -179,12 +195,12 @@ Not all compilers define the same macros, so their availability may vary.
 
 ```text
 __cplusplus
-__STDC_HOSTED__                     [C++11]
+__STDC_HOSTED__                     [C++11] [Also available since C99]
 __LINE__
 __FILE__
 __DATE__
 __TIME__
-__func__                            Current function name. Not a macro: a predefined variable in every function [C++11]
+__func__                            Current function name. Not a macro: a predefined variable in every function [C++11] [Also available since C99]
 __FUNCTION__                        Current function name. Non-standard
 __FUNCDNAME__                       Current function name. Non-standard
 __PRETTY_FUNCTION__                 Current function name. Non-standard [GCC]
@@ -196,12 +212,14 @@ __STDCPP_FLOAT32_T__                [C++23]
 __STDCPP_FLOAT64_T__                [C++23]
 __STDCPP_FLOAT128_T__               [C++23]
 __STDC__
-__STDC_VERSION__                    [C++11]
-__STDC_ISO_10646__                  [C++11]
+__STDC_VERSION__                    [C++11] [Also available since C95]
+__STDC_ISO_10646__                  [C++11] [Also available since C99]
 __STDC_MB_MIGHT_NEQ_WC__            [C++11]
 __STDCPP_THREADS__                  [C++11]
 __STDCPP_STRICT_POINTER_SAFETY__    [C++11, removed in C++23]
 ```
+
+**Note**: GCC and Clang accept `__func__` and `_Pragma` even in C++98 mode, as an extension.
 
 ## Constants
 
@@ -209,7 +227,11 @@ __STDCPP_STRICT_POINTER_SAFETY__    [C++11, removed in C++23]
 
 - The type of `nullptr` is `std::nullptr_t`.
 - It replaces the macro `NULL` with a more meaningful, type-safe keyword.
-- `nullptr` is not `0`, `0x0`, `((void*)0)`, etc.
+- `nullptr` is not `0`, `0x0`, `((void*) 0)`, etc.
+
+[Also available since C23. The type `nullptr_t` comes from `<stddef.h>`]
+
+> **C compiler support**: GCC 13, Clang 16, MSVC not supported (tested up to 18.6). MinGW GCC 13 and 14 declare `nullptr_t` in `<stddef.h>`, but MinGW GCC 15 and 16 do not.
 
 **Benefits**:
 
@@ -232,6 +254,10 @@ foo(ptr);       // Calls foo(char *): ptr is a char *, its value does not matter
 **Note**: The overload is chosen at compile time, from the type of the argument, not from its value. `foo(std::nullptr_t)` is only called when you write `nullptr` in the call. A `char *` that is null at runtime goes to `foo(char *)`, so that function must still check for `nullptr`.
 
 ### constexpr [C++11]
+
+[Also available since C23, but only for variables. C has no `constexpr` functions]
+
+> **C compiler support**: GCC 13, Clang 19, MSVC not supported (tested up to 18.6).
 
 - `constexpr` **variables** are evaluated at compile time and cannot be modified.
 
@@ -491,6 +517,10 @@ power(double base, uint8_t exp) {
 
 Prefix `0b` or `0B` followed by one or more binary digits (`0` or `1`).
 
+[Also available since C23]
+
+> **C compiler support**: GCC 9 or older (as standard C23: 11), Clang 9 or older (as standard C23: 19), MSVC 16.8 or older. They accepted it as an extension before C23.
+
 **Example**:
 
 ```cpp
@@ -503,6 +533,10 @@ unsigned int    b = 0B0010;
 The single-quote character (`'`) may be used arbitrarily as a digit separator in numeric literals to improve readability.
 
 Useful to make numbers more 'human readable'.
+
+[Also available since C23]
+
+> **C compiler support**: GCC 12, Clang 13, MSVC 16.8 or older. MSVC also accepts it with `/std:c11` and `/std:c17` (tested with 18.6).
 
 **Example**:
 
@@ -520,16 +554,16 @@ double  dbl = 0.12'34'56'78;
 #### Integer Literals
 
 ```text
-0b / 0B         Binary                          0b1001 / 0B1001     [C++14]
+0b / 0B         Binary                          0b1001 / 0B1001     [C++14] [Also available since C23]
 0               Octal                           0123
 0x / 0X         Hexadecimal                     0x123 / 0X123
 u / U           unsigned                        123u / 123U
 l / L           long                            123l / 123L
 lu / ul         unsigned long                   123ul / 123lu
 LU / UL         unsigned long                   123UL / 123LU
-ll / LL         long long                       123ll / 123LL
-llu / ull       unsigned long long              123ull / 123llu     [C++11] (officially)
-LLU / ULL       unsigned long long              123ULL / 123LLU     [C++11] (officially)
+ll / LL         long long                       123ll / 123LL       [C++11] (officially) [Also available since C99]
+llu / ull       unsigned long long              123ull / 123llu     [C++11] (officially) [Also available since C99]
+LLU / ULL       unsigned long long              123ULL / 123LLU     [C++11] (officially) [Also available since C99]
 z / Z           signed size_t                   123z / 123Z         [C++23]
 uz / UZ         size_t                          123uz / 123UZ       [C++23]
 ```
@@ -540,8 +574,8 @@ uz / UZ         size_t                          123uz / 123UZ       [C++23]
 f / F           float                           2f, 2F, 2.0f / 2.0F
 l / L           long double                     2.0l / 2.0L
 e / E           Exponent                        2e2 / 2E2 == 2 * 10^2 == 200
-0x / 0X         Hexadecimal float                                                       [C++17]
-p / P           Binary exponent for hex float   0x2.1p0 = (2 + 1/16) * 2^0 = 2.0625     [C++17]
+0x / 0X         Hexadecimal float                                                       [C++17] [Also available since C99]
+p / P           Binary exponent for hex float   0x2.1p0 = (2 + 1/16) * 2^0 = 2.0625     [C++17] [Also available since C99]
 ```
 
 **Hexadecimal float regex**:
@@ -559,6 +593,8 @@ Examples:
 0x0.8p-1  = 0.25
 ```
 
+**Note**: MSVC 17.14 accepts hexadecimal float literals even with `/std:c++14`. With `-pedantic`, GCC and Clang warn about them before C++17.
+
 #### Character Literals
 
 ```text
@@ -570,6 +606,10 @@ U               char32_t (UTF-32)               U'a'            Range [0x0, 0xFF
 ```
 
 **Note**: Some compilers may not fully support all Unicode character literal prefixes.
+
+[Also available in C: the prefixes `u8`, `u` and `U` for strings, and `u` and `U` for characters, since C11 (`char16_t` and `char32_t` come from `<uchar.h>`). The `u8'a'` character literal comes with C23, and its type is `unsigned char`, not `char` (C++17) or `char8_t` (C++20). C23 also changes the element type of `u8"..."` strings from `char` to `char8_t`, a typedef of `unsigned char` in `<uchar.h>`]
+
+> **C compiler support**: `u8'a'`: GCC 10, Clang 15, MSVC not supported (tested up to 18.6).
 
 #### String Literals
 
@@ -766,6 +806,12 @@ Person p1 { "Carlos", 10 };
 std::vector<float> v {1, 2, 3};
 ```
 
+[C always accepted braces after `=` with values: `int x = { 42 };` or `struct S s = { 1, 2 };`. C23 adds the empty initializer: `int x = {};` zero-initializes the object. Braces without `=` (`int x { 42 };`) and the narrowing check are C++ only]
+
+> **C compiler support**: GCC 13, Clang 17. MSVC 17.9 inside functions and 18.6 at file scope (up to 18.2, it fails at file scope with an internal compiler error). Up to 18.2, MSVC does not zero a scalar inside a function: `x` stays uninitialized. Structs and arrays are zeroed. 18.6 fixes it.
+
+**Note**: In C, `= {}` and the classic `= {0}` usually give the same result: all members are zero. The differences: `{0}` works since C89. Only `{}` guarantees that the padding bytes are also zero (it matters with `memcmp`, hashes, or when you write the bytes to a file or a socket). In a union, `{0}` only sets the first member, while `{}` zeroes the whole union. And only `{}` can initialize a variable length array (`int a[n] = {};`).
+
 ### Aggregate Initialization Improvements [C++17]
 
 - C++14 allows default member initializers in aggregates (`int a = 0;`).
@@ -788,6 +834,7 @@ Derived d{ {1}, 2 };  // Initializes Base::a = 1, Derived::b = 2
 ### Designated Initializers [C++20]
 
 - This is a C99 standard feature that was not included in C++.
+- In C99 the members can be in any order, and array designators like `[3] = 7` are also allowed. C++20 needs the declaration order and has no array designators.
 - Prior to C++20, aggregate initialization relied on the order of members in the class or struct definition. However, this could lead to errors if the order changed or if some members were added or removed.
 
 **Example**:
@@ -806,6 +853,8 @@ Point p3 { .z = 30, .x = 10 };            // Error: Order is important
 
 **Note**: The fact that order matters makes it less useful.
 
+**Note**: GCC and MSVC report the wrong order as an error. Clang 22 only gives a warning (`-Wreorder-init-list`) and compiles it. MSVC 17.14 also rejects designated initializers before `/std:c++20` (error C7555).
+
 ## Type Inference
 
 Type inference reduces boilerplate by letting the compiler deduce variable or function return types from context.
@@ -814,6 +863,10 @@ Type inference reduces boilerplate by letting the compiler deduce variable or fu
 
 - Replaces explicit type declarations, especially useful with long or complex types.
 - Improves code readability and reduces verbosity.
+
+[Also available since C23, but only to deduce the type of a variable: `auto i = 3;`. C has no `auto` return types and no `auto` parameters]
+
+> **C compiler support**: GCC 13, Clang 18, MSVC not supported (tested up to 18.6). MSVC treats `auto` as the old storage class, so `auto d = 2.5;` compiles as an `int` with only a warning.
 
 **Example**:
 
@@ -841,6 +894,10 @@ multiply(auto a, auto b) {
 - Yields the type of an expression without evaluating it.
 - Especially useful to deduce types in template code or to declare variables based on expressions.
 
+[Similar feature since C23: `typeof(expression)`. It was a compiler extension before]
+
+> **C compiler support**: GCC 13, Clang 16, MSVC 17.7.
+
 **Example**:
 
 ```cpp
@@ -866,8 +923,8 @@ if (std::is_same<decltype(c), float>::value)
 int             y  = 0;
 const int &     y2 = y;
 
-const auto y3 = y2;     // y3 is const int
-decltype(auto) y4 = y2; // y4 is const int&
+const auto     y3 = y2; // y3 is const int
+decltype(auto) y4 = y2; // y4 is const int &
 ```
 
 ### Trailing Return Type [C++11]
@@ -892,6 +949,7 @@ auto add(A a, B b) -> decltype(a + b) {
 
 ```cpp
 #include <tuple>
+
 std::tuple<int, double, std::string> getData() {
     return {42, 3.14, "hello"};
 }
@@ -900,9 +958,9 @@ auto [i, d, s] = getData(); // i == 42, d == 3.14, s == "hello"
 
 //--
 
-struct Punto { int x, y; };
+struct Point { int x, y; };
 
-Punto p{10, 20};
+Point p{10, 20};
 
 auto [px, py] = p;  // px == 10, py == 20
 ```
@@ -1197,10 +1255,103 @@ int b = 4;
 int &&rvalue = a + b; // binds to rvalue (3 + 4 == 7)
 ```
 
+### std::move and std::forward [C++11]
+
+- `std::move(x)` does not move anything. It only casts `x` to an rvalue, so the compiler can choose the move constructor or the move assignment.
+- After a move, the source object is still valid, but its value is unspecified. You can assign it a new value or destroy it.
+- `std::move` on a `const` object copies it, because the move constructor cannot take a `const` rvalue.
+- `std::forward<T>(x)` is used in templates with a forwarding reference (`T &&`). It passes the argument on as an lvalue or as an rvalue, the same way the caller passed it (perfect forwarding).
+
+```cpp
+#include <string>
+#include <utility>
+#include <vector>
+
+std::string a = "hello";
+std::string b = std::move(a);               // Calls the move constructor. a is valid, but its value is unspecified
+
+std::vector<std::string> v;
+
+template <typename T>
+void add(T &&value) {                       // In a template, T&& accepts both lvalues and rvalues
+    v.push_back(std::forward<T>(value));    // Copies an lvalue, moves an rvalue
+}
+
+std::string s = "text";
+add(s);                                     // Copies s
+add(std::string("tmp"));                    // Moves the temporary
+```
+
+**Note**: Inside `add`, `value` has a name, so it is always an lvalue. Without `std::forward`, it would always be copied.
+
+### noexcept [C++11]
+
+- `noexcept` marks a function that does not throw exceptions. If it throws anyway, the program calls `std::terminate()`.
+- `noexcept(expression)` makes it conditional: the function is `noexcept` only if the expression is `true`.
+- The `noexcept(expression)` operator checks at compile time whether an expression can throw. It does not run the expression.
+- Destructors are `noexcept` by default.
+- It replaces the old `throw()` specification (removed in C++20).
+
+**Why it matters**: when a `std::vector` grows, it moves the elements to the new memory only if the move constructor is `noexcept`. Otherwise it copies them, because a move that throws halfway would leave the vector in a broken state.
+
+```cpp
+void f() noexcept;              // Does not throw
+void g();                       // May throw
+
+static_assert(noexcept(f()), "");   // noexcept operator: f() is not called
+static_assert(!noexcept(g()), "");
+
+// The outer noexcept is the specifier, the inner one is the operator
+template <typename T>
+void swapValues(T &a, T &b) noexcept(noexcept(T(std::move(a))));
+
+struct A {
+    A(A &&) noexcept;           // std::vector<A> moves the elements when it grows
+};
+
+struct B {
+    B(const B &);
+    B(B &&);                    // std::vector<B> copies the elements when it grows
+};
+```
+
+### Guaranteed Copy Elision [C++17]
+
+- When an object is initialized from a temporary of the same type, no copy or move is done: the object is built directly in its final place.
+- Before C++17 this was an optional optimization, and the copy or move constructor had to exist anyway. Since C++17 it is guaranteed.
+- So a function can return by value a type that cannot be copied or moved.
+- It only applies to temporaries. Returning a named local variable (NRVO) is still an optional optimization, so it needs a copy or move constructor.
+
+```cpp
+struct NoMove {
+    NoMove(int v) : value(v) {}
+    NoMove(const NoMove &) = delete;
+    NoMove(NoMove &&)      = delete;
+
+    int value;
+};
+
+NoMove make() {
+    return NoMove(42);          // Error before C++17: the move constructor is deleted
+}
+
+NoMove a = make();              // Built directly in a, no copy or move
+NoMove b = NoMove(1);           // The same
+
+//NoMove makeNamed() {
+//    NoMove n(42);
+//    return n;                 // Error: n is a named variable, so a copy or move constructor is needed
+//}
+```
+
 ### Static Assertions [C++11]
 
 - `static_assert` checks a compile-time boolean expression; if false, produces a compilation error.
 - Pre-C++11 options (`assert`, `#error`) were either too late or too early in compilation.
+
+[Also available since C11 as `_Static_assert(expression, "message")`. The header `<assert.h>` defines the macro `static_assert`. C23 makes `static_assert` a keyword and the message optional]
+
+> **C compiler support**: `static_assert` as a keyword and without message: GCC 13, Clang 16, MSVC 17.6.
 
 ```cpp
 static_assert(sizeof(void *) == sizeof(uint32_t), "We store pointers in uint32_t fields");
@@ -1238,6 +1389,12 @@ C++11 allows variable alignment to be queried with `alignof` and specified with 
 - `alignas()`: Specifies the memory alignment for a variable or type.
 `alignas(T)` is shorthand for `alignas(alignof(T))`.
 
+[Also available since C11 as `_Alignas` and `_Alignof`. The header `<stdalign.h>` defines the macros `alignas` and `alignof`. C23 makes them keywords]
+
+> **C compiler support**: `alignas` and `alignof` as keywords: GCC 13, Clang 16, MSVC not supported (tested up to 18.6). With MSVC, include `<stdalign.h>` to get the macros, or use `_Alignas` and `_Alignof`.
+
+One difference: in C, `alignas` cannot go between `struct` and the name, so `struct alignas(16) V` is an error. Put it on a member instead: `struct V { alignas(16) float v[4]; };`.
+
 ```cpp
 struct alignas(16) Vec4 {
     float x, y, z, w;
@@ -1251,6 +1408,10 @@ alignas(float) unsigned char matrix4x4[sizeof(float) * 16];
 ### Thread-Local Storage (TLS) [C++11]
 
 Allows each thread to have its own separate instance of a variable.
+
+[Also available since C11 as `_Thread_local`. C23 makes `thread_local` a keyword]
+
+> **C compiler support**: `thread_local` as a keyword: GCC 13, Clang 16, MSVC 17.7.
 
 It also works for **static** variables defined inside a function. Each thread will have its own instance of the **per thread global** variable.
 
@@ -1330,6 +1491,36 @@ Each compiler/library can create its own attributes inside a namespace:
 
 Since C++17, we can use `[[using namespace: attribute, attribute, ...]]`.
 
+[Also available since C23 with the same `[[...]]` syntax, but only for some of the standard attributes: `noreturn`, `deprecated`, `fallthrough`, `nodiscard` and `maybe_unused`. C23 also adds `unsequenced` and `reproducible`, which C++ does not have. The other ones (`likely`, `unlikely`, `carries_dependency`, `no_unique_address` and `assume`) are not in C. Attributes with a vendor namespace, like `[[gnu::...]]`, are also allowed. `[[using ...]]` is C++ only]
+
+> **C compiler support**:
+>
+> - The five common attributes: GCC 13, Clang 9 or older, MSVC 17.7.
+> - `unsequenced` and `reproducible`: GCC 15. Clang (tested up to 23) and MSVC (tested up to 18.6) ignore them with a warning.
+> - C++ only attributes like `[[likely]]`: GCC and Clang ignore them with a warning. MSVC accepts them without any message.
+
+### Nested Namespace Definitions [C++17]
+
+- Nested namespaces can be declared in a single line.
+
+```cpp
+// Before C++17
+namespace company {
+namespace project {
+namespace module {
+
+    void foo();
+
+}
+}
+}
+
+// Since C++17
+namespace company::project::module {
+    void foo();
+}
+```
+
 ## Object-Oriented
 
 ### In-Class Member Initializers [C++11]
@@ -1397,7 +1588,7 @@ B b2(123); // calls A(int)
 ### Move Constructors [C++11]
 
 - A move constructor is a special type of constructor that allows the efficient transfer of resources (like memory ownership) from a temporary object to another object.
-- It's usually invoked when you initialize an object with an rvalue (the compiler may also skip the move completely).
+- It's usually invoked when you initialize an object with an rvalue (the compiler may also skip the move completely, see [Guaranteed Copy Elision](#guaranteed-copy-elision-c17)).
 - Move constructors are typically used to avoid unnecessary copies of objects, improving performance.
 
 ```cpp
@@ -1739,6 +1930,10 @@ auto a = fibonacci_23(5);
 - `enum class` (or `enum struct`) defines an enumeration with a scoped name and optionally a fixed underlying type.
 - No implicit conversions to integer, improving type safety.
 
+[Also available since C23, but only the fixed underlying type: `enum Status : uint8_t { ON, OFF };`. The enum is still unscoped: `ON` is visible without `Status::` and it converts to `int` without a cast. C has no `enum class`]
+
+> **C compiler support**: GCC 13, Clang 9 or older as an extension (as standard C23: 18), MSVC not supported (tested up to 18.6).
+
 ```cpp
 // Note: The type is optional
 enum class Status : uint8_t {
@@ -1752,6 +1947,26 @@ Status s3 = 0;          // Error: no implicit conversion
 
 int x = static_cast<int>(s1); // Ok
 int y = s1;             // Error: no implicit conversion
+```
+
+### using enum [C++20]
+
+- Brings the values of an enumeration into the current scope, so you can use them without the `Color::` prefix.
+- Especially useful in `switch` statements.
+
+```cpp
+enum class Color { Red, Green, Blue };
+
+const char * toString(Color c) {
+    switch (c) {
+        using enum Color;
+        case Red:   return "red";
+        case Green: return "green";
+        case Blue:  return "blue";
+    }
+
+    return "";
+}
 ```
 
 ### Multidimensional Subscript Operator [C++23]
@@ -1806,6 +2021,26 @@ std::vector<std::vector<std::vector<std::vector<std::vector<int>>>>> vec;
 
 ```cpp
 std::vector vec = {1, 2, 3, 4}; // CTAD: deduces std::vector<int>
+```
+
+### auto Non-Type Template Parameters [C++17]
+
+- A non-type template parameter can be declared with `auto`. Its type is deduced from the argument.
+
+```cpp
+// Before C++17: the type must be passed too
+template <typename T, T Value>
+struct Constant11 { static constexpr T value = Value; };
+
+Constant11<int,  5>   a;
+Constant11<char, 'x'> b;
+
+// Since C++17
+template <auto Value>
+struct Constant { static constexpr auto value = Value; };
+
+Constant<5>   c;    // Value is an int
+Constant<'x'> d;    // Value is a char
 ```
 
 ### Template Aliases [C++11]
